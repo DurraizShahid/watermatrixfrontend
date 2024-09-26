@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Dimensions } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Dimensions} from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { useNavigation } from '@react-navigation/native';
 import { Picker } from '@react-native-picker/picker';
 import dummyData from './dummyData';
+import CheckBox from '@react-native-community/checkbox';
+
 
 const { height } = Dimensions.get('window');
 
@@ -16,6 +18,7 @@ const AdvancedSearchScreen = () => {
     const [customLocation, setCustomLocation] = useState('');
     const [areaFilter, setAreaFilter] = useState([]);
     const [searchText, setSearchText] = useState('');
+    const [isPaidFilter, setIsPaidFilter] = useState(false); // New state for IsPaid filter
 
     const menuItems = [
         { name: 'Search', icon: 'search' },
@@ -23,7 +26,7 @@ const AdvancedSearchScreen = () => {
         { name: 'Parcels and Lands', icon: 'map' }
     ];
 
-    const filterItems = ["Comm", "InProgress", "Dis-Conn", "Conflict", "New", "Notice"];
+    const filterItems = ["New", "InProgress", "Dis-Conn", "Conflict", "Notice", "Comm"];
     const typeItems = [...new Set(dummyData.map(item => item.type)), 'All'];
     const uniqueCategories = ['All', ...new Set(dummyData.map(item => item.category))];
     const areaItems = ["10 Marla", "1 Kanal", "1 Kanal+"];
@@ -58,9 +61,13 @@ const AdvancedSearchScreen = () => {
                 matchesFilter = matchesFilter && item.title.toLowerCase().includes(searchText.toLowerCase());
             }
 
+            if (isPaidFilter) { // Apply the IsPaid filter
+                matchesFilter = matchesFilter && item.IsPaid === true;
+            }
+
             return matchesFilter;
         });
-    }, [filter, selectedCategory, selectedType, areaFilter, searchText]);
+    }, [filter, selectedCategory, selectedType, areaFilter, searchText, isPaidFilter]);
 
     const resultCount = filteredResults.length;
 
@@ -172,6 +179,17 @@ const AdvancedSearchScreen = () => {
                                 ))}
                             </ScrollView>
                         </View>
+
+                        <View style={styles.placeholderContainer}> 
+
+                            <View style={styles.checkboxContainer}>
+                                <CheckBox 
+                                    value={isPaidFilter} 
+                                    onValueChange={setIsPaidFilter} 
+                                />
+                                <Text style={styles.checkboxLabel}>Show only Paid Properties</Text>
+                            </View>
+                        </View>
                     </>
                 )}
 
@@ -228,11 +246,8 @@ const AdvancedSearchScreen = () => {
                         </View>
                     </>
                 )}
-
                 <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-                    <Text style={styles.searchButtonText}>
-                        {resultCount} Results - Search
-                    </Text>
+                    <Text style={styles.searchButtonText}>Search ({resultCount})</Text>
                 </TouchableOpacity>
             </ScrollView>
         </View>
@@ -247,11 +262,11 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 20,
+        padding: 15,
         backgroundColor: '#23252F',
     },
     backButton: {
-        marginRight: 80,
+        marginRight: 15,
     },
     title: {
         color: 'white',
@@ -259,7 +274,7 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
     menuContainer: {
-        marginVertical: 20,
+        marginVertical: 10,
     },
     menuScroll: {
         flexDirection: 'row',
@@ -267,7 +282,7 @@ const styles = StyleSheet.create({
     menuButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 20,
+        padding: 10,
         marginHorizontal: 5,
         backgroundColor: '#23252F',
         borderRadius: 5,
@@ -278,7 +293,6 @@ const styles = StyleSheet.create({
     filterButton: {
         padding: 10,
         marginHorizontal: 5,
-        marginVertical: 15,
         backgroundColor: '#6C768A',
         borderRadius: 5,
     },
@@ -287,11 +301,9 @@ const styles = StyleSheet.create({
     },
     filterText: {
         color: 'white',
-        marginHorizontal: 5,
     },
     placeholderContainer: {
-        marginVertical: 15,
-        marginHorizontal: 5,
+        marginVertical: 10,
     },
     placeholderTitle: {
         color: 'white',
@@ -306,7 +318,7 @@ const styles = StyleSheet.create({
     },
     searchButton: {
         backgroundColor: '#38ADA9',
-        padding: 20,
+        padding: 15,
         borderRadius: 5,
         alignItems: 'center',
         marginVertical: 20,
@@ -315,6 +327,14 @@ const styles = StyleSheet.create({
         color: 'white',
         fontSize: 16,
         fontWeight: 'bold',
+    },
+    checkboxContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    checkboxLabel: {
+        color: 'white',
+        marginLeft: 10,
     },
 });
 

@@ -28,6 +28,16 @@ const LoginScreen: React.FC<LoginScreenProps & { onLoginSuccess: (userId: string
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
+
+      // Check if Admin credentials are used
+      if (phoneNo === 'Admin' && loginPassword === 'Admin') {
+        Alert.alert('Admin Access', 'Logged in as Admin successfully.');
+        onLoginSuccess('admin'); // You can use a specific ID for Admin
+        navigation.navigate('Search', { userId: 'admin' });
+        return;
+      }
+
+      // Regular user login check
       const user = users.find(
         (user) => user.phoneNo === phoneNo && user.password === loginPassword
       );
