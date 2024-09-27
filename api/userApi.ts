@@ -25,7 +25,7 @@ export const registerUser = async (name: string, email: string, phone: string, p
 // Login user
 export const loginUser = async (phone: string, password: string) => {
   try {
-    const response = await api.post('/auth/login', { PhoneNo: phone, Password: password });
+    const response = await api.post('/auth/login', { phone_number: phone, password_hash: password });
 
     return response.data;
   } catch (error) {
