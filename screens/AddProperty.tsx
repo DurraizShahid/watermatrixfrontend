@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { View, TextInput, StyleSheet, TouchableOpacity, Text, ScrollView, Alert } from 'react-native';
+import { View, TextInput, StyleSheet, TouchableOpacity, Text, ScrollView, Alert, Button } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Switch } from 'react-native';
-import { launchImageLibrary } from 'react-native-image-picker';
+import { CameraOptions, launchCamera, launchImageLibrary } from 'react-native-image-picker';
 
 const AddProperty = () => {
   const [title, setTitle] = useState('');
@@ -20,7 +20,7 @@ const AddProperty = () => {
   const [water, setWater] = useState(false);
   const [electricity, setElectricity] = useState(false);
   const [isPaid, setIsPaid] = useState(false);
-  const [images, setImages] = useState([]);
+ const [images, setImages] = useState<string | null>(null);
 
   const handleSave = () => {
     // Validate inputs
@@ -91,7 +91,23 @@ const AddProperty = () => {
       }
     });
   };
+  
+  const handleCaptureImage = () => {
+    const options: CameraOptions = {
+      mediaType: 'photo',
+    };
 
+    launchCamera(options, (response) => {
+      if (response.didCancel) {
+        console.log('User cancelled image picker');
+      } else if (response.errorCode) {
+        console.log('ImagePicker Error: ', response.errorMessage);
+      } else if (response.assets && response.assets.length > 0) {
+        const capturedImage = response.assets[0].uri;
+        setImages(capturedImage || null);
+      }
+    });
+  };
   return (
     <ScrollView style={styles.scrollView}>
       <View style={styles.container}>
@@ -100,10 +116,16 @@ const AddProperty = () => {
         <Text style={styles.subheading}>List your property with ease and reach potential buyers or renters.</Text>
         
         <TouchableOpacity style={styles.imageUploadContainer} onPress={handleAddImages}>
+        
           <MaterialCommunityIcons name="plus" size={24} color="#666" />
           <Text style={styles.imageUploadText}>Add Images</Text>
         </TouchableOpacity>
+        <TouchableOpacity style={styles.capture} onPress={handleAddImages}>
+        <TouchableOpacity onPress={handleCaptureImage} >
+        <Text style={styles.imageUploadText}>Capture from camera</Text>
 
+          </TouchableOpacity>
+          </TouchableOpacity>
         <TextInput
           style={styles.input}
           placeholder="Title"
@@ -345,6 +367,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
+  },
+  capture:{
+    backgroundColor: '#1E1E1E',
+    borderRadius: 5,
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
   },
   imageUploadText: {
     color: '#666',
