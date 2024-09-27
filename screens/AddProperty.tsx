@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, TextInput, StyleSheet, TouchableOpacity, Text, ScrollView, Alert } from 'react-native';
+import { View, TextInput, StyleSheet, TouchableOpacity, Text, ScrollView, Alert, Image } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Switch } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
@@ -72,21 +72,62 @@ const AddProperty = () => {
     setImages([]);
   };
 
-  const handleAddImages = () => {
+
+  const handleImagePicker = () => {
+    Alert.alert(
+      'Add Images',
+      'Choose an option',
+      [
+        {
+          text: 'Take Photo',
+          onPress: handleCamera,
+        },
+        {
+          text: 'Choose from Gallery',
+          onPress: handleGallery,
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+      ],
+      { cancelable: true }
+    );
+  };
+
+  const handleCamera = () => {
+    const options = {
+      mediaType: 'photo',
+      quality: 1,
+    };
+
+    launchCamera(options, (response) => {
+      if (response.didCancel) {
+        console.log('User cancelled camera');
+      } else if (response.error) {
+        console.log('Camera Error: ', response.error);
+      } else {
+        const newImages = response.assets.map((asset) => asset.uri);
+        setImages([...images, ...newImages]);
+      }
+    });
+  };
+
+  const handleGallery = () => {
     const options = {
       mediaType: 'photo',
       quality: 1,
       multiple: true,
-      selectionLimit: 5, // Limit to 5 images
+      selectionLimit: 5, // Limit the number of images
     };
 
     launchImageLibrary(options, (response) => {
       if (response.didCancel) {
-        console.log('User cancelled image picker');
+        console.log('User cancelled gallery');
       } else if (response.error) {
-        console.log('ImagePicker Error: ', response.error);
+        console.log('Gallery Error: ', response.error);
       } else {
-        const newImages = response.assets.map(asset => asset.uri);
+        const newImages = response.assets.map((asset) => asset.uri);
         setImages([...images, ...newImages]);
       }
     });
@@ -98,12 +139,19 @@ const AddProperty = () => {
         <Text style={styles.heading}>Add a</Text>
         <Text style={styles.headingTwo}>Property.</Text>
         <Text style={styles.subheading}>List your property with ease and reach potential buyers or renters.</Text>
-        
-        <TouchableOpacity style={styles.imageUploadContainer} onPress={handleAddImages}>
-          <MaterialCommunityIcons name="plus" size={24} color="#666" />
-          <Text style={styles.imageUploadText}>Add Images</Text>
-        </TouchableOpacity>
 
+        <ScrollView horizontal style={styles.imageUploadContainer}>
+          {images.length > 0 ? (
+            images.map((uri, index) => (
+              <Image key={index} source={{ uri }} style={styles.thumbnail} />
+            ))
+          ) : (
+            <TouchableOpacity style={styles.imageUploadButton} onPress={handleImagePicker}>
+              <MaterialCommunityIcons name="plus" size={24} color="#666" />
+              <Text style={styles.imageUploadText}>Add Images</Text>
+            </TouchableOpacity>
+          )}
+        </ScrollView>
         <TextInput
           style={styles.input}
           placeholder="Title"
@@ -127,16 +175,16 @@ const AddProperty = () => {
           value={price}
           onChangeText={setPrice}
         />
-        
+
         <Text style={styles.sectionTitle}>Property Location</Text>
-        
+
         <TouchableOpacity
           style={styles.typeButton}
           onPress={() => setType('Residential')}
         >
           <Text style={styles.typeButtonText}>Residential</Text>
         </TouchableOpacity>
-        
+
         <TextInput
           style={styles.input}
           placeholder="Address"
@@ -158,9 +206,9 @@ const AddProperty = () => {
           value={city}
           onChangeText={setCity}
         />
-        
+
         <Text style={styles.sectionTitle}>Additional Information</Text>
-        
+
         <TextInput
           style={styles.input}
           placeholder="Area (Sq. Ft.)"
@@ -169,7 +217,7 @@ const AddProperty = () => {
           value={area}
           onChangeText={setArea}
         />
-        
+
         <View style={styles.counterContainer}>
           <Text style={styles.counterLabel}>Bedrooms:</Text>
           <TouchableOpacity onPress={() => setBedrooms(Math.max(1, bedrooms - 1))}>
@@ -180,7 +228,7 @@ const AddProperty = () => {
             <MaterialCommunityIcons name="plus-circle" size={24} color="#45B08C" />
           </TouchableOpacity>
         </View>
-        
+
         <View style={styles.counterContainer}>
           <Text style={styles.counterLabel}>Bathrooms:</Text>
           <TouchableOpacity onPress={() => setBathrooms(Math.max(1, bathrooms - 1))}>
@@ -191,7 +239,7 @@ const AddProperty = () => {
             <MaterialCommunityIcons name="plus-circle" size={24} color="#45B08C" />
           </TouchableOpacity>
         </View>
-        
+
         <View style={styles.switchContainer}>
           <Text style={styles.switchLabel}>Is the property furnished?</Text>
           <Switch
@@ -201,7 +249,7 @@ const AddProperty = () => {
             thumbColor={furnished ? "#45B08C" : "#f4f3f4"}
           />
         </View>
-        
+
         <View style={styles.switchContainer}>
           <Text style={styles.switchLabel}>Does it have a kitchen/s?</Text>
           <Switch
@@ -211,7 +259,7 @@ const AddProperty = () => {
             thumbColor={kitchen ? "#45B08C" : "#f4f3f4"}
           />
         </View>
-        
+
         <View style={styles.switchContainer}>
           <Text style={styles.switchLabel}>Does it have running water?</Text>
           <Switch
@@ -221,7 +269,7 @@ const AddProperty = () => {
             thumbColor={water ? "#45B08C" : "#f4f3f4"}
           />
         </View>
-        
+
         <View style={styles.switchContainer}>
           <Text style={styles.switchLabel}>Does it have Electricity?</Text>
           <Switch
@@ -231,7 +279,7 @@ const AddProperty = () => {
             thumbColor={electricity ? "#45B08C" : "#f4f3f4"}
           />
         </View>
-        
+
         <View style={styles.switchContainer}>
           <Text style={styles.switchLabel}>Is the property paid for?</Text>
           <Switch
@@ -241,7 +289,7 @@ const AddProperty = () => {
             thumbColor={isPaid ? "#45B08C" : "#f4f3f4"}
           />
         </View>
-        
+
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
           <Text style={styles.saveButtonText}>Save</Text>
         </TouchableOpacity>
