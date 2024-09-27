@@ -13,6 +13,7 @@ import Detailedpage from '../screens/Detailedpage';
 import Mapp from '../screens/mapadd';
 import AdvancedSearch from '../screens/AdvancedSearch';
 import SearchResultsScreen from '../screens/SearchResultsScreen';
+import { NavigationContainer } from '@react-navigation/native';
 
 const Stack = createStackNavigator();
 
@@ -22,10 +23,10 @@ export type RootStackParamList = {
   GoogleMapscreen: undefined;
   Chat: undefined;
   Services: undefined;
-  Add: undefined;
   Listview: undefined;
   Login: undefined;
   Signin: undefined;
+  AddProperty:undefined;
   Mapp: { onSelectLocation: (longitude: number, latitude: number) => void };
 };
 

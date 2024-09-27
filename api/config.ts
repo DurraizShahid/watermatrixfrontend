@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Base URL for your backend server
-const BASE_URL = 'http://localhost:3000'; 
+const BASE_URL = 'railwaybackendfinal-production-2f0c.up.railway.app'; 
 
 
 const api = axios.create({

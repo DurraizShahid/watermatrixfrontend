@@ -179,7 +179,7 @@ const GoogleMapscreen: React.FC = () => {
                         <Marker
                             key={index}
                             coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
-                            onPress={() => navigation.navigate('Detailedpage', { id: marker.id })}
+                            onPress={() => (navigation as any).navigate('Detailedpage', { id: marker.id })}
                         >
                             <View style={[styles.marker, { backgroundColor: marker.status === "InProgress" ? 'orange' : (marker.IsPaid ? '#018E42' : '#FF3562') }]} >
                                 <Icon name="tint" size={15} color="white" />
@@ -194,7 +194,7 @@ const GoogleMapscreen: React.FC = () => {
                 <Icon name="crosshairs" size={20} color="white" />
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.listButton} onPress={() => navigation.navigate('AdvancedSearch')}>
+            <TouchableOpacity style={styles.listButton} onPress={() => (navigation as any).navigate('AdvancedSearch')}>
                 <Icon name="list" size={20} color="white" />
                 <Text style={styles.listButtonText}>List</Text>
             </TouchableOpacity>
@@ -203,7 +203,7 @@ const GoogleMapscreen: React.FC = () => {
                 <Icon name="globe" size={20} color="white" />
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.favouritesButton} onPress={() => navigation.navigate('Favourites')}>
+            <TouchableOpacity style={styles.favouritesButton} onPress={() => (navigation as any).navigate('Favourites')}>
                 <Icon name="heart-o" size={20} color="white" />
             </TouchableOpacity>
 

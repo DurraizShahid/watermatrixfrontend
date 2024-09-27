@@ -9,7 +9,7 @@ interface ApiError {
 // Register a new user
 export const registerUser = async (name: string, email: string, phone: string, password: string, Country: string, City: string) => {
   try {
-    const response = await api.post('/auth/register', { FullName: name, Email: email, PhoneNo: phone, Password: password,Country:Country,City:City, });
+    const response = await api.post('/auth/register', { name: name, email: email, phone_number: phone,password_hash: password,country:Country,city:City, });
 
 
     return response.data;
@@ -25,7 +25,7 @@ export const registerUser = async (name: string, email: string, phone: string, p
 // Login user
 export const loginUser = async (phone: string, password: string) => {
   try {
-    const response = await api.post('/auth/login', { PhoneNo: phone, Password: password });
+    const response = await api.post('/auth/login', { phone_number: phone, password_hash: password });
 
     return response.data;
   } catch (error) {

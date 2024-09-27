@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
-import { View, TextInput, StyleSheet, TouchableOpacity, Text, ScrollView, Alert, Image } from 'react-native';
+import { View, TextInput, StyleSheet, TouchableOpacity, Text, ScrollView, Alert, Button } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Switch } from 'react-native';
-import { launchImageLibrary } from 'react-native-image-picker';
+import { CameraOptions, launchCamera, launchImageLibrary } from 'react-native-image-picker';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { RootStackParamList } from '../navigation/MainNavigator';
 
 const AddProperty = () => {
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
@@ -20,7 +23,11 @@ const AddProperty = () => {
   const [water, setWater] = useState(false);
   const [electricity, setElectricity] = useState(false);
   const [isPaid, setIsPaid] = useState(false);
-  const [images, setImages] = useState([]);
+ const [images, setImages] = useState<string | null>(null);
+ const [longitude, setLongitude] = useState('');
+  const [latitude, setLatitude] = useState('');
+  const navigation = useNavigation();
+  const route = useRoute<RouteProp<RootStackParamList, 'AddProperty'>>();
 
   const handleSave = () => {
     // Validate inputs
@@ -118,7 +125,7 @@ const AddProperty = () => {
       mediaType: 'photo',
       quality: 1,
       multiple: true,
-      selectionLimit: 5, // Limit the number of images
+      selectionLimit: 5, 
     };
 
     launchImageLibrary(options, (response) => {
@@ -132,26 +139,45 @@ const AddProperty = () => {
       }
     });
   };
+  
+  const handleCaptureImage = () => {
+    const options: CameraOptions = {
+      mediaType: 'photo',
+    };
 
+    launchCamera(options, (response) => {
+      if (response.didCancel) {
+        console.log('User cancelled image picker');
+      } else if (response.errorCode) {
+        console.log('ImagePicker Error: ', response.errorMessage);
+      } else if (response.assets && response.assets.length > 0) {
+        const capturedImage = response.assets[0].uri;
+        setImages(capturedImage || null);
+      }
+    });
+  };
+  const handleLocationSelection = (longitude: number, latitude: number) => {
+    setLongitude(longitude.toString());
+    setLatitude(latitude.toString());
+  };
   return (
     <ScrollView style={styles.scrollView}>
       <View style={styles.container}>
         <Text style={styles.heading}>Add a</Text>
         <Text style={styles.headingTwo}>Property.</Text>
         <Text style={styles.subheading}>List your property with ease and reach potential buyers or renters.</Text>
+        
+        <TouchableOpacity style={styles.imageUploadContainer} onPress={handleAddImages}>
+        
+          <MaterialCommunityIcons name="plus" size={24} color="#666" />
+          <Text style={styles.imageUploadText}>Add Images</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.capture} onPress={handleAddImages}>
+        <TouchableOpacity onPress={handleCaptureImage} >
+        <Text style={styles.imageUploadText}>Capture from camera</Text>
 
-        <ScrollView horizontal style={styles.imageUploadContainer}>
-          {images.length > 0 ? (
-            images.map((uri, index) => (
-              <Image key={index} source={{ uri }} style={styles.thumbnail} />
-            ))
-          ) : (
-            <TouchableOpacity style={styles.imageUploadButton} onPress={handleImagePicker}>
-              <MaterialCommunityIcons name="plus" size={24} color="#666" />
-              <Text style={styles.imageUploadText}>Add Images</Text>
-            </TouchableOpacity>
-          )}
-        </ScrollView>
+          </TouchableOpacity>
+          </TouchableOpacity>
         <TextInput
           style={styles.input}
           placeholder="Title"
@@ -194,11 +220,21 @@ const AddProperty = () => {
         />
         <TextInput
           style={styles.input}
-          placeholder="Zipcode"
+          placeholder="Latitude"
           placeholderTextColor="#666"
-          value={zipcode}
-          onChangeText={setZipcode}
+          value={latitude}
+          onChangeText={setLatitude}
+          editable={false}
         />
+        <TextInput
+          style={styles.input}
+          placeholder="Longitude"
+          placeholderTextColor="#666"
+          value={longitude}
+          onChangeText={setLongitude}
+          editable={false}
+        />
+
         <TextInput
           style={styles.input}
           placeholder="City"
@@ -289,7 +325,9 @@ const AddProperty = () => {
             thumbColor={isPaid ? "#45B08C" : "#f4f3f4"}
           />
         </View>
-
+        <TouchableOpacity style={styles.saveButton}    onPress={() => (navigation as any).navigate('Mapp', { onSelectLocation: handleLocationSelection })} >
+        <Text style={styles.saveButtonText}>Select Location on Map</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
           <Text style={styles.saveButtonText}>Save</Text>
         </TouchableOpacity>
@@ -393,6 +431,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
+  },
+  capture:{
+    backgroundColor: '#1E1E1E',
+    borderRadius: 5,
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
   },
   imageUploadText: {
     color: '#666',
