@@ -3,8 +3,11 @@ import { View, TextInput, StyleSheet, TouchableOpacity, Text, ScrollView, Alert,
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Switch } from 'react-native';
 import { CameraOptions, launchCamera, launchImageLibrary } from 'react-native-image-picker';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { RootStackParamList } from '../navigation/MainNavigator';
 
 const AddProperty = () => {
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
@@ -21,6 +24,10 @@ const AddProperty = () => {
   const [electricity, setElectricity] = useState(false);
   const [isPaid, setIsPaid] = useState(false);
  const [images, setImages] = useState<string | null>(null);
+ const [longitude, setLongitude] = useState('');
+  const [latitude, setLatitude] = useState('');
+  const navigation = useNavigation();
+  const route = useRoute<RouteProp<RootStackParamList, 'AddProperty'>>();
 
   const handleSave = () => {
     // Validate inputs
@@ -77,7 +84,7 @@ const AddProperty = () => {
       mediaType: 'photo',
       quality: 1,
       multiple: true,
-      selectionLimit: 5, // Limit to 5 images
+      selectionLimit: 5, 
     };
 
     launchImageLibrary(options, (response) => {
@@ -107,6 +114,10 @@ const AddProperty = () => {
         setImages(capturedImage || null);
       }
     });
+  };
+  const handleLocationSelection = (longitude: number, latitude: number) => {
+    setLongitude(longitude.toString());
+    setLatitude(latitude.toString());
   };
   return (
     <ScrollView style={styles.scrollView}>
@@ -168,11 +179,21 @@ const AddProperty = () => {
         />
         <TextInput
           style={styles.input}
-          placeholder="Zipcode"
+          placeholder="Latitude"
           placeholderTextColor="#666"
-          value={zipcode}
-          onChangeText={setZipcode}
+          value={latitude}
+          onChangeText={setLatitude}
+          editable={false}
         />
+        <TextInput
+          style={styles.input}
+          placeholder="Longitude"
+          placeholderTextColor="#666"
+          value={longitude}
+          onChangeText={setLongitude}
+          editable={false}
+        />
+
         <TextInput
           style={styles.input}
           placeholder="City"
@@ -263,7 +284,9 @@ const AddProperty = () => {
             thumbColor={isPaid ? "#45B08C" : "#f4f3f4"}
           />
         </View>
-        
+        <TouchableOpacity style={styles.saveButton}    onPress={() => (navigation as any).navigate('Mapp', { onSelectLocation: handleLocationSelection })} >
+        <Text style={styles.saveButtonText}>Select Location on Map</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
           <Text style={styles.saveButtonText}>Save</Text>
         </TouchableOpacity>

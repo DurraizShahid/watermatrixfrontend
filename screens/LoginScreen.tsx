@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ImageBackground } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import users from './userdummyData'; // Adjust as necessary to import your user data
-import { registerUser } from '../api/userApi'; // Assume you have a function to register users
+import { loginUser,registerUser } from '../api/userApi'; // Assume you have a function to register users
 
 interface LoginScreenProps {
   navigation: any;
@@ -22,45 +22,58 @@ const LoginScreen: React.FC<LoginScreenProps & { onLoginSuccess: (userId: string
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPhone, setSignupPhone] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
+  const [Country, setCountry] = useState('');
+  const [City, setCity] = useState('');
+
+
   const [signupConfirmPassword, setSignupConfirmPassword] = useState('');
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     setLoading(true);
-    setTimeout(() => {
+    try {
+      const data = await loginUser(phoneNo, loginPassword);
       setLoading(false);
-      const user = users.find(
-        (user) => user.phoneNo === phoneNo && user.password === loginPassword
-      );
-
-      if (user) {
-        Alert.alert('Success', 'Logged in successfully.');
-        console.log('UserId:', user.id);
-        onLoginSuccess(user.id);
-        navigation.navigate('Search', { userId: user.id });
+      Alert.alert('Success', 'Logged in successfully.');
+  
+      console.log("UserId:", data.UserId); // This will now be the UUID
+      onLoginSuccess(data.UserId); // Pass UUID
+  
+      navigation.navigate('AddProperty', { userId: data.UserId });
+    } catch (error) {
+      setLoading(false);
+      if (error instanceof Error) {
+        Alert.alert('Error', error.message);
       } else {
-        Alert.alert('Error', 'Invalid phone number or password.');
+        Alert.alert('Error', 'An unexpected error occurred.');
       }
-    }, 1000);
+    }
   };
-
   const handleSignup = async () => {
     if (signupPassword !== signupConfirmPassword) {
       Alert.alert('Error', 'Passwords do not match.');
       return;
     }
-
+  
     setLoading(true);
     try {
-      // Call the API to register the user
-      await registerUser(signupName, signupEmail, signupPhone, signupPassword);
+      await registerUser(signupName, signupEmail, signupPhone, signupPassword, Country, City);
       setLoading(false);
       Alert.alert('Success', 'Registration successful');
-      // Optionally navigate to OTP or login screen
-    } catch (error) {
+      // navigation.navigate('OTP', { phone: signupPhone });
+    } catch (error: any) {
       setLoading(false);
-      Alert.alert('Error', error.message || 'An unexpected error occurred.');
+      // Log the error to understand the issue
+      console.error(error);
+      if (error.response && error.response.data) {
+        Alert.alert('Error', error.response.data.message || 'An unexpected error occurred.');
+      } else if (error instanceof Error) {
+        Alert.alert('Error', error.message);
+      } else {
+        Alert.alert('Error', 'An unexpected error occurred.');
+      }
     }
   };
+  
 
   return (
     <View style={styles.container}>
@@ -129,15 +142,30 @@ const LoginScreen: React.FC<LoginScreenProps & { onLoginSuccess: (userId: string
             value={signupPhone}
             onChangeText={setSignupPhone}
           />
+           <TextInput
+            style={styles.input}
+            placeholder="City"
+            placeholderTextColor="#888"
+            value={City}
+            onChangeText={setCity}
+          />
+           <TextInput
+            style={styles.input}
+            placeholder="Phone Number"
+            placeholderTextColor="#888"
+            value={Country}
+            onChangeText={setCountry}
+          />
           <View style={styles.passwordContainer}>
             <TextInput
               style={styles.input}
               placeholder="Password"
               placeholderTextColor="#888"
               secureTextEntry={!showPassword}
-              value={signupPassword}
-              onChangeText={setSignupPassword}
+              value={loginPassword}
+              onChangeText={setLoginPassword}
             />
+            
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
               <MaterialCommunityIcons name={showPassword ? 'eye-off' : 'eye'} size={24} color="#888" />
             </TouchableOpacity>
