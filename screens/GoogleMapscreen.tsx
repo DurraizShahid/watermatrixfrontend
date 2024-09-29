@@ -105,7 +105,7 @@ const GoogleMapscreen: React.FC = () => {
             const typeFilterMatch = activeFilters.includes(marker.type) || activeFilters.includes("All");
             const statusFilterMatch = isAnyBottomFilterActive ? activeFilters.some(filter => filter === marker.status) : true;
             const paymentFilterMatch = (isPaidChecked && marker.IsPaid) || (isUnpaidChecked && !marker.IsPaid) || (!isPaidChecked && !isUnpaidChecked);
-            const searchFilterMatch = marker.area.toString().includes(filter); // Updated for integer comparison
+            const searchFilterMatch = marker.price.toString().includes(filter); // Updated for integer comparison
             
             return typeFilterMatch && statusFilterMatch && paymentFilterMatch && searchFilterMatch; // Include search filter
         });

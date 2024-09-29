@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ImageBackground } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import users from './userdummyData'; // Adjust as necessary to import your user data
-import { loginUser,registerUser } from '../api/userApi'; // Assume you have a function to register users
+import { loginUser, registerUser } from '../api/userApi'; // Assume you have a function to register users
 
 interface LoginScreenProps {
   navigation: any;
@@ -22,20 +22,16 @@ const LoginScreen: React.FC<LoginScreenProps & { onLoginSuccess: (userId: string
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPhone, setSignupPhone] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
-  const [Country, setCountry] = useState('');
-  const [City, setCity] = useState('');
-
-
   const [signupConfirmPassword, setSignupConfirmPassword] = useState('');
+  const [country, setCountry] = useState('');
+  const [city, setCity] = useState('');
 
   const handleLogin = async () => {
     setLoading(true);
     try {
       const data = await loginUser(phoneNo, loginPassword);
       setLoading(false);
-<<<<<<< HEAD
 
-      // Check if Admin credentials are used
       if (phoneNo === 'Admin' && loginPassword === 'Admin') {
         Alert.alert('Admin Access', 'Logged in as Admin successfully.');
         onLoginSuccess('admin'); // You can use a specific ID for Admin
@@ -43,48 +39,37 @@ const LoginScreen: React.FC<LoginScreenProps & { onLoginSuccess: (userId: string
         return;
       }
 
-      // Regular user login check
-      const user = users.find(
-        (user) => user.phoneNo === phoneNo && user.password === loginPassword
-      );
-
+      const user = users.find((user) => user.phoneNo === phoneNo && user.password === loginPassword);
       if (user) {
         Alert.alert('Success', 'Logged in successfully.');
-        console.log('UserId:', user.id);
         onLoginSuccess(user.id);
         navigation.navigate('Search', { userId: user.id });
-=======
-      Alert.alert('Success', 'Logged in successfully.');
-  
-      console.log("UserId:", data.UserId); // This will now be the UUID
-      onLoginSuccess(data.UserId); // Pass UUID
-  
-      navigation.navigate('AddProperty', { userId: data.UserId });
+      } else {
+        Alert.alert('Error', 'Invalid phone number or password.');
+      }
     } catch (error) {
       setLoading(false);
       if (error instanceof Error) {
         Alert.alert('Error', error.message);
->>>>>>> 4cb2979c5b72a9f0416cb366fbe2542c468012f9
       } else {
         Alert.alert('Error', 'An unexpected error occurred.');
       }
     }
   };
+
   const handleSignup = async () => {
     if (signupPassword !== signupConfirmPassword) {
       Alert.alert('Error', 'Passwords do not match.');
       return;
     }
-  
+
     setLoading(true);
     try {
-      await registerUser(signupName, signupEmail, signupPhone, signupPassword, Country, City);
+      await registerUser(signupName, signupEmail, signupPhone, signupPassword, country, city);
       setLoading(false);
       Alert.alert('Success', 'Registration successful');
-      // navigation.navigate('OTP', { phone: signupPhone });
     } catch (error: any) {
       setLoading(false);
-      // Log the error to understand the issue
       console.error(error);
       if (error.response && error.response.data) {
         Alert.alert('Error', error.response.data.message || 'An unexpected error occurred.');
@@ -95,11 +80,9 @@ const LoginScreen: React.FC<LoginScreenProps & { onLoginSuccess: (userId: string
       }
     }
   };
-  
 
   return (
     <View style={styles.container}>
-      {/* Background Image */}
       <ImageBackground source={require('../images/topsplash.png')} style={styles.backgroundImage}>
         <Text style={styles.needHelpText}>Need Help?</Text>
         <View style={styles.header}>
@@ -115,7 +98,6 @@ const LoginScreen: React.FC<LoginScreenProps & { onLoginSuccess: (userId: string
 
       {isLogin ? (
         <View style={styles.formContainer}>
-          {/* Login Form */}
           <TextInput
             style={styles.input}
             placeholder="Phone Number"
@@ -142,7 +124,6 @@ const LoginScreen: React.FC<LoginScreenProps & { onLoginSuccess: (userId: string
         </View>
       ) : (
         <View style={styles.formContainer}>
-          {/* Sign-up Form */}
           <TextInput
             style={styles.input}
             placeholder="Full Name"
@@ -164,18 +145,18 @@ const LoginScreen: React.FC<LoginScreenProps & { onLoginSuccess: (userId: string
             value={signupPhone}
             onChangeText={setSignupPhone}
           />
-           <TextInput
+          <TextInput
             style={styles.input}
             placeholder="City"
             placeholderTextColor="#888"
-            value={City}
+            value={city}
             onChangeText={setCity}
           />
-           <TextInput
+          <TextInput
             style={styles.input}
-            placeholder="Phone Number"
+            placeholder="Country"
             placeholderTextColor="#888"
-            value={Country}
+            value={country}
             onChangeText={setCountry}
           />
           <View style={styles.passwordContainer}>
@@ -184,10 +165,9 @@ const LoginScreen: React.FC<LoginScreenProps & { onLoginSuccess: (userId: string
               placeholder="Password"
               placeholderTextColor="#888"
               secureTextEntry={!showPassword}
-              value={loginPassword}
-              onChangeText={setLoginPassword}
+              value={signupPassword}
+              onChangeText={setSignupPassword}
             />
-            
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
               <MaterialCommunityIcons name={showPassword ? 'eye-off' : 'eye'} size={24} color="#888" />
             </TouchableOpacity>
@@ -275,20 +255,18 @@ const styles = StyleSheet.create({
   loginButton: {
     backgroundColor: '#00D6BE',
     paddingVertical: 15,
-    justifyContent: 'center',
-    alignItems: 'center',
     borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 10,
   },
   loginButtonText: {
     color: '#fff',
-    fontSize: 18,
-    marginRight: 10,
+    fontSize: 16,
   },
   forgotPassword: {
     color: '#fff',
     textAlign: 'center',
-    marginTop: 20,
-    textDecorationLine: 'underline',
+    marginTop: 15,
   },
 });
 

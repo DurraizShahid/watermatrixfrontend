@@ -8,9 +8,6 @@ import darkModeStyle from './darkModeStyle';
 import dummyData from './dummyData';
 import CheckBox from '@react-native-community/checkbox';
 
-const showNoFavouritesMessage = () => {
-    Alert.alert("No favourites added", "You haven't added any favourites yet.");
-};
 
 const GoogleMapscreen: React.FC = () => {
     const [location, setLocation] = useState<Region | null>(null);
@@ -108,10 +105,13 @@ const GoogleMapscreen: React.FC = () => {
             const typeFilterMatch = activeFilters.includes(marker.type) || activeFilters.includes("All");
             const statusFilterMatch = isAnyBottomFilterActive ? activeFilters.some(filter => filter === marker.status) : true;
             const paymentFilterMatch = (isPaidChecked && marker.IsPaid) || (isUnpaidChecked && !marker.IsPaid) || (!isPaidChecked && !isUnpaidChecked);
-            return typeFilterMatch && statusFilterMatch && paymentFilterMatch;
+            const searchFilterMatch = marker.price.toString().includes(filter); // Updated for integer comparison
+            
+            return typeFilterMatch && statusFilterMatch && paymentFilterMatch && searchFilterMatch; // Include search filter
         });
     };
-
+    
+    
     const markersToDisplay = filteredMarkers();
 
     const centerMapOnLocation = () => {
@@ -179,10 +179,10 @@ const GoogleMapscreen: React.FC = () => {
                         <Marker
                             key={index}
                             coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
-                            onPress={() => navigation.navigate('Detailedpage', { id: marker.id })}
+                            onPress={() => (navigation as any).navigate('Detailedpage', { id: marker.id })}
                         >
                             <View style={[styles.marker, { backgroundColor: marker.status === "InProgress" ? 'orange' : (marker.IsPaid ? '#018E42' : '#FF3562') }]} >
-                                <Icon name="tint" size={30} color="white" />
+                                <Icon name="tint" size={15} color="white" />
                                 <Text style={styles.markerText}>{marker.area}</Text>
                             </View>
                         </Marker>
@@ -194,7 +194,7 @@ const GoogleMapscreen: React.FC = () => {
                 <Icon name="crosshairs" size={20} color="white" />
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.listButton} onPress={() => navigation.navigate('AdvancedSearch')}>
+            <TouchableOpacity style={styles.listButton} onPress={() => (navigation as any).navigate('AdvancedSearch')}>
                 <Icon name="list" size={20} color="white" />
                 <Text style={styles.listButtonText}>List</Text>
             </TouchableOpacity>
@@ -203,7 +203,7 @@ const GoogleMapscreen: React.FC = () => {
                 <Icon name="globe" size={20} color="white" />
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.favouritesButton} onPress={showNoFavouritesMessage}>
+            <TouchableOpacity style={styles.favouritesButton} onPress={() => (navigation as any).navigate('Favourites')}>
                 <Icon name="heart-o" size={20} color="white" />
             </TouchableOpacity>
 
@@ -282,13 +282,15 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     marker: {
-        padding: 5,
+        flexDirection: 'row', // Align icon and text horizontally
+        paddingVertical: 5,
+        paddingHorizontal:5, // Increased horizontal padding for wider marker
         borderRadius: 5,
         alignItems: 'center',
     },
     markerText: {
         color: 'white',
-        marginTop: 5,
+        marginLeft: 1, // Added space between icon and text
     },
     currentLocationButton: {
         position: 'absolute',

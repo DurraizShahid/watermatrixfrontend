@@ -1,20 +1,17 @@
 import React, { useState } from 'react';
-import { View, TextInput, StyleSheet, TouchableOpacity, Text, ScrollView, Alert, Button } from 'react-native';
+import { View, TextInput, StyleSheet, TouchableOpacity, Text, ScrollView, Alert, Switch, FlatList, Image } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { Switch } from 'react-native';
-import { CameraOptions, launchCamera, launchImageLibrary } from 'react-native-image-picker';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { RootStackParamList } from '../navigation/MainNavigator';
+import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
+import axios from 'axios'; // Import Axios
+import { useNavigation } from '@react-navigation/native';
 
 const AddProperty = () => {
-
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
-  const [type, setType] = useState('Residential');
   const [address, setAddress] = useState('');
-  const [zipcode, setZipcode] = useState('');
   const [city, setCity] = useState('');
+  const [zipcode, setZipcode] = useState('');
   const [area, setArea] = useState('');
   const [bedrooms, setBedrooms] = useState(1);
   const [bathrooms, setBathrooms] = useState(1);
@@ -23,25 +20,23 @@ const AddProperty = () => {
   const [water, setWater] = useState(false);
   const [electricity, setElectricity] = useState(false);
   const [isPaid, setIsPaid] = useState(false);
- const [images, setImages] = useState<string | null>(null);
- const [longitude, setLongitude] = useState('');
+  const [images, setImages] = useState([]);
+  const [locationName, setLocationName] = useState(''); // Uneditable location name
+  const [longitude, setLongitude] = useState('');
   const [latitude, setLatitude] = useState('');
   const navigation = useNavigation();
-  const route = useRoute<RouteProp<RootStackParamList, 'AddProperty'>>();
 
   const handleSave = () => {
-    // Validate inputs
-    if (!title || !description || !price || !address || !zipcode || !city || !area) {
+    // Validation
+    if (!title || !description || !price || !address || !zipcode || !city || !area || !latitude || !longitude) {
       Alert.alert('Error', 'Please fill in all required fields');
       return;
     }
 
-    // Create property object
     const property = {
       title,
       description,
       price: parseFloat(price),
-      type,
       address,
       zipcode,
       city,
@@ -54,130 +49,111 @@ const AddProperty = () => {
       electricity,
       isPaid,
       images,
+      latitude,
+      longitude,
     };
 
-    // Here you would typically send this data to your backend or store it locally
+    // Add property to backend
     console.log('Property saved:', property);
     Alert.alert('Success', 'Property added successfully');
-
     // Reset form
-    setTitle('');
-    setDescription('');
-    setPrice('');
-    setType('Residential');
-    setAddress('');
-    setZipcode('');
-    setCity('');
-    setArea('');
-    setBedrooms(1);
-    setBathrooms(1);
-    setFurnished(false);
-    setKitchen(false);
-    setWater(false);
-    setElectricity(false);
-    setIsPaid(false);
-    setImages([]);
+    resetForm();
   };
 
+  const resetForm = () => {
+    setTitle(''); setDescription(''); setPrice(''); setAddress('');
+    setZipcode(''); setCity(''); setArea(''); setBedrooms(1); setBathrooms(1);
+    setFurnished(false); setKitchen(false); setWater(false); setElectricity(false);
+    setIsPaid(false); setImages([]); setLocationName(''); setLatitude(''); setLongitude('');
+  };
 
   const handleImagePicker = () => {
     Alert.alert(
       'Add Images',
       'Choose an option',
       [
-        {
-          text: 'Take Photo',
-          onPress: handleCamera,
-        },
-        {
-          text: 'Choose from Gallery',
-          onPress: handleGallery,
-        },
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
+        { text: 'Take Photo', onPress: handleCamera },
+        { text: 'Choose from Gallery', onPress: handleGallery },
+        { text: 'Cancel', style: 'cancel' },
       ],
       { cancelable: true }
     );
   };
 
   const handleCamera = () => {
-    const options = {
-      mediaType: 'photo',
-      quality: 1,
-    };
-
+    const options = { mediaType: 'photo', quality: 1 };
     launchCamera(options, (response) => {
-      if (response.didCancel) {
-        console.log('User cancelled camera');
-      } else if (response.error) {
-        console.log('Camera Error: ', response.error);
-      } else {
+      if (response.assets) {
         const newImages = response.assets.map((asset) => asset.uri);
-        setImages([...images, ...newImages]);
+        setImages((prevImages) => [...prevImages, ...newImages]);
       }
     });
+  };
+
+  const handleRemoveImage = (uri) => {
+    setImages((prevImages) => prevImages.filter((image) => image !== uri));
   };
 
   const handleGallery = () => {
-    const options = {
-      mediaType: 'photo',
-      quality: 1,
-      multiple: true,
-      selectionLimit: 5, 
-    };
-
+    const options = { mediaType: 'photo', quality: 1, selectionLimit: 5 };
     launchImageLibrary(options, (response) => {
-      if (response.didCancel) {
-        console.log('User cancelled gallery');
-      } else if (response.error) {
-        console.log('Gallery Error: ', response.error);
-      } else {
+      if (response.assets) {
         const newImages = response.assets.map((asset) => asset.uri);
-        setImages([...images, ...newImages]);
+        setImages((prevImages) => [...prevImages, ...newImages]);
       }
     });
   };
-  
-  const handleCaptureImage = () => {
-    const options: CameraOptions = {
-      mediaType: 'photo',
-    };
 
-    launchCamera(options, (response) => {
-      if (response.didCancel) {
-        console.log('User cancelled image picker');
-      } else if (response.errorCode) {
-        console.log('ImagePicker Error: ', response.errorMessage);
-      } else if (response.assets && response.assets.length > 0) {
-        const capturedImage = response.assets[0].uri;
-        setImages(capturedImage || null);
-      }
-    });
-  };
-  const handleLocationSelection = (longitude: number, latitude: number) => {
+  const handleLocationSelection = (longitude, latitude) => {
     setLongitude(longitude.toString());
     setLatitude(latitude.toString());
+    fetchLocationName(latitude, longitude); // Fetch location name
   };
+
+  const fetchLocationName = async (lat, lon) => {
+    try {
+      const response = await axios.get(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lon}&key=AIzaSyCbuY6KKFkmb4wkMzCsOskkxd7btxHCZ-w`);
+      if (response.data.status === 'OK') {
+        const location = response.data.results[0]?.formatted_address || 'Location not found';
+        setLocationName(location); // Set location name from API response
+      } else {
+        setLocationName('Location not found');
+      }
+    } catch (error) {
+      console.error(error);
+      setLocationName('Error fetching location');
+    }
+  };
+
   return (
     <ScrollView style={styles.scrollView}>
       <View style={styles.container}>
-        <Text style={styles.heading}>Add a</Text>
-        <Text style={styles.headingTwo}>Property.</Text>
+        <Text style={styles.heading}>Add Property</Text>
         <Text style={styles.subheading}>List your property with ease and reach potential buyers or renters.</Text>
-        
-        <TouchableOpacity style={styles.imageUploadContainer} onPress={handleAddImages}>
-        
+
+        <TouchableOpacity style={styles.imageUploadContainer} onPress={handleImagePicker}>
           <MaterialCommunityIcons name="plus" size={24} color="#666" />
           <Text style={styles.imageUploadText}>Add Images</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.capture} onPress={handleAddImages}>
-        <TouchableOpacity onPress={handleCaptureImage} >
-        <Text style={styles.imageUploadText}>Capture from camera</Text>
 
-          </TouchableOpacity>
-          </TouchableOpacity>
+        {images.length > 0 && (
+  <FlatList
+    data={images}
+    renderItem={({ item }) => (
+      <View style={styles.imageContainer}>
+        <Image source={{ uri: item }} style={styles.image} />
+        <TouchableOpacity onPress={() => handleRemoveImage(item)} style={styles.deleteButton}>
+          <MaterialCommunityIcons name="delete" size={24} color="white" />
+        </TouchableOpacity>
+      </View>
+    )}
+    keyExtractor={(item, index) => index.toString()}
+    horizontal
+    showsHorizontalScrollIndicator={false}
+    contentContainerStyle={styles.imageList}
+  />
+)}
+
         <TextInput
           style={styles.input}
           placeholder="Title"
@@ -202,39 +178,22 @@ const AddProperty = () => {
           onChangeText={setPrice}
         />
 
+        {/* Location field */}
         <Text style={styles.sectionTitle}>Property Location</Text>
-
         <TouchableOpacity
-          style={styles.typeButton}
-          onPress={() => setType('Residential')}
+          style={styles.saveButton}
+          onPress={() => navigation.navigate('Mapp', { onSelectLocation: handleLocationSelection })}
         >
-          <Text style={styles.typeButtonText}>Residential</Text>
+          <Text style={styles.saveButtonText}>Select Location on Map</Text>
         </TouchableOpacity>
-
         <TextInput
           style={styles.input}
-          placeholder="Address"
-          placeholderTextColor="#666"
-          value={address}
-          onChangeText={setAddress}
+          placeholder="Location Name"
+          value={locationName}
+          editable={false} // Make this field uneditable
         />
-        <TextInput
-          style={styles.input}
-          placeholder="Latitude"
-          placeholderTextColor="#666"
-          value={latitude}
-          onChangeText={setLatitude}
-          editable={false}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Longitude"
-          placeholderTextColor="#666"
-          value={longitude}
-          onChangeText={setLongitude}
-          editable={false}
-        />
-
+        
+        {/* More fields */}
         <TextInput
           style={styles.input}
           placeholder="City"
@@ -242,9 +201,6 @@ const AddProperty = () => {
           value={city}
           onChangeText={setCity}
         />
-
-        <Text style={styles.sectionTitle}>Additional Information</Text>
-
         <TextInput
           style={styles.input}
           placeholder="Area (Sq. Ft.)"
@@ -253,7 +209,8 @@ const AddProperty = () => {
           value={area}
           onChangeText={setArea}
         />
-
+        
+        {/* Counter for bedrooms */}
         <View style={styles.counterContainer}>
           <Text style={styles.counterLabel}>Bedrooms:</Text>
           <TouchableOpacity onPress={() => setBedrooms(Math.max(1, bedrooms - 1))}>
@@ -265,6 +222,7 @@ const AddProperty = () => {
           </TouchableOpacity>
         </View>
 
+        {/* Counter for bathrooms */}
         <View style={styles.counterContainer}>
           <Text style={styles.counterLabel}>Bathrooms:</Text>
           <TouchableOpacity onPress={() => setBathrooms(Math.max(1, bathrooms - 1))}>
@@ -276,60 +234,51 @@ const AddProperty = () => {
           </TouchableOpacity>
         </View>
 
+        {/* Additional Information Section */}
+        <Text style={styles.sectionTitle}>Additional Information</Text>
         <View style={styles.switchContainer}>
-          <Text style={styles.switchLabel}>Is the property furnished?</Text>
+          <Text style={styles.switchLabel}>Furnished</Text>
           <Switch
             value={furnished}
             onValueChange={setFurnished}
-            trackColor={{ false: "#3E3E3E", true: "#45B08C" }}
-            thumbColor={furnished ? "#45B08C" : "#f4f3f4"}
+            thumbColor={furnished ? "#45B08C" : "#666"}
           />
         </View>
-
         <View style={styles.switchContainer}>
-          <Text style={styles.switchLabel}>Does it have a kitchen/s?</Text>
+          <Text style={styles.switchLabel}>Kitchen</Text>
           <Switch
             value={kitchen}
             onValueChange={setKitchen}
-            trackColor={{ false: "#3E3E3E", true: "#45B08C" }}
-            thumbColor={kitchen ? "#45B08C" : "#f4f3f4"}
+            thumbColor={kitchen ? "#45B08C" : "#666"}
           />
         </View>
-
         <View style={styles.switchContainer}>
-          <Text style={styles.switchLabel}>Does it have running water?</Text>
+          <Text style={styles.switchLabel}>Water Supply</Text>
           <Switch
             value={water}
             onValueChange={setWater}
-            trackColor={{ false: "#3E3E3E", true: "#45B08C" }}
-            thumbColor={water ? "#45B08C" : "#f4f3f4"}
+            thumbColor={water ? "#45B08C" : "#666"}
           />
         </View>
-
         <View style={styles.switchContainer}>
-          <Text style={styles.switchLabel}>Does it have Electricity?</Text>
+          <Text style={styles.switchLabel}>Electricity Supply</Text>
           <Switch
             value={electricity}
             onValueChange={setElectricity}
-            trackColor={{ false: "#3E3E3E", true: "#45B08C" }}
-            thumbColor={electricity ? "#45B08C" : "#f4f3f4"}
+            thumbColor={electricity ? "#45B08C" : "#666"}
           />
         </View>
-
         <View style={styles.switchContainer}>
-          <Text style={styles.switchLabel}>Is the property paid for?</Text>
+          <Text style={styles.switchLabel}>Is Paid</Text>
           <Switch
             value={isPaid}
             onValueChange={setIsPaid}
-            trackColor={{ false: "#3E3E3E", true: "#45B08C" }}
-            thumbColor={isPaid ? "#45B08C" : "#f4f3f4"}
+            thumbColor={isPaid ? "#45B08C" : "#666"}
           />
         </View>
-        <TouchableOpacity style={styles.saveButton}    onPress={() => (navigation as any).navigate('Mapp', { onSelectLocation: handleLocationSelection })} >
-        <Text style={styles.saveButtonText}>Select Location on Map</Text>
-        </TouchableOpacity>
+
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-          <Text style={styles.saveButtonText}>Save</Text>
+          <Text style={styles.saveButtonText}>Save Property</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -338,51 +287,62 @@ const AddProperty = () => {
 
 const styles = StyleSheet.create({
   scrollView: {
-    backgroundColor: '#000',
+    backgroundColor: '#1A1A1D',
   },
   container: {
-    flex: 1,
     padding: 20,
-    backgroundColor: '#000',
   },
   heading: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: '#FFF',
-    marginBottom: 0,
-  },
-  headingTwo: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: '#FFF',
-    marginBottom: 5,
+    fontSize: 24,
+    color: '#fff',
+    marginBottom: 10,
   },
   subheading: {
     fontSize: 16,
-    color: '#666',
+    color: '#aaa',
     marginBottom: 20,
   },
+  imageUploadContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  imageUploadText: {
+    color: '#666',
+    marginLeft: 10,
+  },
   input: {
-    backgroundColor: '#1E1E1E',
-    color: '#FFF',
-    padding: 15,
-    borderRadius: 8,
+    backgroundColor: '#1A1A1D',
+    color: '#fff',
+    padding: 10,
+    borderRadius: 5,
     marginBottom: 10,
-    fontSize: 16,
   },
   multilineInput: {
-    height: 100,
-    textAlignVertical: 'top',
+    height: 80,
   },
-  typeButton: {
-    backgroundColor: '#1E1E1E',
+  sectionTitle: {
+    fontSize: 18,
+    color: '#45B08C',
+    marginVertical: 10,
+    marginTop: 20,
+  },
+  saveButton: {
+    backgroundColor: '#45B08C',
     padding: 15,
-    borderRadius: 8,
-    marginBottom: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginVertical: 20,
   },
-  typeButtonText: {
-    color: '#FFF',
+  saveButtonText: {
+    color: '#fff',
     fontSize: 16,
+    fontWeight: 'bold',
+  },
+  deleteButton: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
   },
   counterContainer: {
     flexDirection: 'row',
@@ -390,67 +350,34 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   counterLabel: {
-    color: '#FFF',
+    color: '#fff',
     marginRight: 10,
     fontSize: 16,
-    flex: 1,
   },
   counterValue: {
-    color: '#FFF',
+    color: '#fff',
     marginHorizontal: 10,
     fontSize: 16,
   },
+  imageList: {
+    flexDirection: 'row',
+    paddingVertical: 10,
+  },
+  image: {
+    width: 100, // Set width as per your requirement
+    height: 100, // Set height as per your requirement
+    marginRight: 10,
+    borderRadius: 8,
+  },
   switchContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 15,
+    justifyContent: 'space-between',
+    marginBottom: 10,
   },
   switchLabel: {
-    color: '#FFF',
+    color: '#fff',
     fontSize: 16,
-    flex: 1,
-    marginRight: 10,
-  },
-  saveButton: {
-    backgroundColor: '#45B08C',
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  saveButtonText: {
-    color: '#FFF',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  imageUploadContainer: {
-    backgroundColor: '#1E1E1E',
-    borderRadius: 8,
-    height: 150,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  capture:{
-    backgroundColor: '#1E1E1E',
-    borderRadius: 5,
-    height: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  imageUploadText: {
-    color: '#666',
-    marginTop: 10,
-    fontSize: 16,
-  },
-  sectionTitle: {
-    color: '#FFF',
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginTop: 20,
-    marginBottom: 10,
   },
 });
 
