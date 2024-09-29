@@ -11,6 +11,8 @@ import {
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import axios from 'axios';
+import bcrypt from 'bcryptjs';
+
 
 // Constants
 const API_URL = 'https://mapmatrixbackend-production.up.railway.app/api/auth/users';
@@ -96,23 +98,28 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation, onLoginSuccess })
   }, []);
 
   // Login handler
-  const handleLogin = () => {
+  const handleLogin = async () => {
     setLoading(true);
-    const user = users.find(
-      (user) =>
-        user.phone_number === loginData.phoneNo &&
-        user.password_hash === loginData.loginPassword
-    );
-    setLoading(false);
+    const user = users.find((user) => user.phone_number === loginData.phoneNo);
 
+    // If user is found, compare the password
     if (user) {
-      Alert.alert('Success', 'Logged in successfully.');
-      onLoginSuccess(user.UserId);
-      navigation.navigate('Search', { userId: user.UserId });
+        const isPasswordValid = await bcrypt.compare(loginData.loginPassword, user.password_hash);
+        
+        setLoading(false);
+
+        if (isPasswordValid) {
+            Alert.alert('Success', 'Logged in successfully.');
+            onLoginSuccess(user.UserId);
+            navigation.navigate('Search', { userId: user.UserId });
+        } else {
+            Alert.alert('Error', 'Invalid phone number or password.');
+        }
     } else {
-      Alert.alert('Error', 'Invalid phone number or password.');
+        setLoading(false);
+        Alert.alert('Error', 'Invalid phone number or password.');
     }
-  };
+};
 
   // Signup handler
   const handleSignup = async () => {

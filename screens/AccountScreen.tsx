@@ -121,8 +121,6 @@ const AccountScreen: React.FC = () => {
         <LoginScreen navigation={navigation} onLoginSuccess={handleLoginSuccess} />
       )}
 
-      {/* Footer */}
-      <Text style={styles.footer}>Test Version 0.01</Text>
     </View>
   );
 };
