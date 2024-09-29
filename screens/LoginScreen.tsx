@@ -32,25 +32,14 @@ const LoginScreen: React.FC<LoginScreenProps & { onLoginSuccess: (userId: string
       const data = await loginUser(phoneNo, loginPassword);
       setLoading(false);
 
-      if (phoneNo === 'Admin' && loginPassword === 'Admin') {
-        Alert.alert('Admin Access', 'Logged in as Admin successfully.');
-        onLoginSuccess('admin'); // You can use a specific ID for Admin
-        navigation.navigate('Search', { userId: 'admin' });
-        return;
-      }
-
-      const user = users.find((user) => user.phoneNo === phoneNo && user.password === loginPassword);
-      if (user) {
-        Alert.alert('Success', 'Logged in successfully.');
-        onLoginSuccess(user.id);
-        navigation.navigate('Search', { userId: user.id });
-      } else {
-        Alert.alert('Error', 'Invalid phone number or password.');
-      }
+      // Assuming successful login returns a user object with userId
+      Alert.alert('Success', 'Logged in successfully.');
+      onLoginSuccess(data.UserId); // Update according to your API response
+      navigation.navigate('Search', { userId: data.UserId });
     } catch (error) {
       setLoading(false);
-      if (error instanceof Error) {
-        Alert.alert('Error', error.message);
+      if (error.response && error.response.data) {
+        Alert.alert('Error', error.response.data.message || 'Invalid phone number or password.');
       } else {
         Alert.alert('Error', 'An unexpected error occurred.');
       }
@@ -65,16 +54,15 @@ const LoginScreen: React.FC<LoginScreenProps & { onLoginSuccess: (userId: string
 
     setLoading(true);
     try {
-      await registerUser(signupName, signupEmail, signupPhone, signupPassword, country, city);
+      const userData = await registerUser(signupName, signupEmail, signupPhone, signupPassword, country, city);
       setLoading(false);
-      Alert.alert('Success', 'Registration successful');
+      Alert.alert('Success', 'Registration successful.');
+      // You can navigate to the login screen after successful signup
+      setIsLogin(true); // Switch to login view
     } catch (error: any) {
       setLoading(false);
-      console.error(error);
       if (error.response && error.response.data) {
         Alert.alert('Error', error.response.data.message || 'An unexpected error occurred.');
-      } else if (error instanceof Error) {
-        Alert.alert('Error', error.message);
       } else {
         Alert.alert('Error', 'An unexpected error occurred.');
       }

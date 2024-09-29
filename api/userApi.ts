@@ -1,63 +1,31 @@
-import api from './config';
+import axios from 'axios';
 
-// Type for API error response
-interface ApiError {
-  message?: string;
-  data?: any;
-}
+// Make sure this URL matches the backend
+const API_URL = 'https://mapmatrixbackend-production.up.railway.app/api/auth'; // Include /api/auth
 
-// Register a new user
-export const registerUser = async (name: string, email: string, phone: string, password: string, Country: string, City: string) => {
-  try {
-    const response = await api.post('/auth/register', { name: name, email: email, phone_number: phone,password_hash: password,country:Country,city:City, });
-
-
-    return response.data;
-  } catch (error) {
-    // Type guard to check if error is an Axios error
-    if (error instanceof Error) {
-      throw (error as ApiError).message || 'Error registering user';
-    }
-    throw 'Error registering user';
-  }
+export const loginUser = async (phoneNo: string, password: string) => {
+  const response = await axios.post(`${API_URL}/login`, {
+    phone_number: phoneNo,
+    password,
+  });
+  return response.data;
 };
 
-// Login user
-export const loginUser = async (phone: string, password: string) => {
-  try {
-    const response = await api.post('/auth/login', { phone_number: phone, password_hash: password });
-
-    return response.data;
-  } catch (error) {
-    if (error instanceof Error) {
-      throw (error as ApiError).message || 'Error logging in';
-    }
-    throw 'Error logging in';
-  }
+export const registerUser = async (
+  name: string,
+  email: string,
+  phoneNo: string,
+  password: string,
+  country: string,
+  city: string
+) => {
+  const response = await axios.post(`${API_URL}/register`, {
+    name,
+    email,
+    phone_number: phoneNo,
+    password,
+    country,
+    city,
+  });
+  return response.data;
 };
-
-// // Send OTP to phone number
-// export const sendOtp = async (phone: string) => {
-//   try {
-//     const response = await api.post('/users/send-otp', { PhoneNo: phone });
-//     return response.data;
-//   } catch (error) {
-//     if (error instanceof Error) {
-//       throw (error as ApiError).message || 'Error sending OTP';
-//     }
-//     throw 'Error sending OTP';
-//   }
-// };
-
-// Verify OTP
-// export const verifyOtp = async (phone: string, otp: string) => {
-//   try {
-//     const response = await api.post('/users/verify-otp', { PhoneNo: phone, Otp: otp });
-//     return response.data;
-//   } catch (error) {
-//     if (error instanceof Error) {
-//       throw (error as ApiError).message || 'Error verifying OTP';
-//     }
-//     throw 'Error verifying OTP';
-//   }
-// };
