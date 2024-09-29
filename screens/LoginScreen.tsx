@@ -1,52 +1,123 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ImageBackground } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+  ImageBackground,
+} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import users from './userdummyData'; // Adjust as necessary to import your user data
-import { loginUser, registerUser } from '../api/userApi'; // Assume you have a function to register users
+import axios from 'axios';
+
+// Constants
+const API_URL = 'https://mapmatrixbackend-production.up.railway.app/api/auth/users';
+
+// Custom hook for managing form state
+const useForm = (initialState: any) => {
+  const [formData, setFormData] = useState(initialState);
+  const handleChange = (name: string, value: string) => {
+    setFormData((prev: any) => ({ ...prev, [name]: value }));
+  };
+  return { formData, handleChange };
+};
+
+// Function to fetch users from API
+const fetchUsers = async () => {
+  try {
+    const response = await axios.get(API_URL);
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response ? error.response.data : error.message);
+  }
+};
+
+// Function to register a new user
+const registerUser = async (name: string, email: string, phone: string, password: string, country: string, city: string) => {
+  const newUser = {
+    name,
+    email,
+    phone_number: phone, // Match the field names in your API
+    password_hash: password, // Ensure the password is hashed appropriately on the backend
+    country,
+    city,
+  };
+
+  try {
+    const response = await axios.post(API_URL, newUser);
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response ? error.response.data : error.message);
+  }
+};
 
 interface LoginScreenProps {
   navigation: any;
+  onLoginSuccess: (userId: string) => void;
 }
 
-const LoginScreen: React.FC<LoginScreenProps & { onLoginSuccess: (userId: string) => void }> = ({ navigation, onLoginSuccess }) => {
+const LoginScreen: React.FC<LoginScreenProps> = ({ navigation, onLoginSuccess }) => {
+  // State management
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [users, setUsers] = useState<any[]>([]);
 
-  // Login state
-  const [phoneNo, setPhoneNo] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
+  // Form handling for login and signup
+  const { formData: loginData, handleChange: handleLoginChange } = useForm({
+    phoneNo: '',
+    loginPassword: '',
+  });
 
-  // Signup state
-  const [signupName, setSignupName] = useState('');
-  const [signupEmail, setSignupEmail] = useState('');
-  const [signupPhone, setSignupPhone] = useState('');
-  const [signupPassword, setSignupPassword] = useState('');
-  const [signupConfirmPassword, setSignupConfirmPassword] = useState('');
-  const [country, setCountry] = useState('');
-  const [city, setCity] = useState('');
+  const { formData: signupData, handleChange: handleSignupChange } = useForm({
+    signupName: '',
+    signupEmail: '',
+    signupPhone: '',
+    signupPassword: '',
+    signupConfirmPassword: '',
+    country: '',
+    city: '',
+  });
 
-  const handleLogin = async () => {
-    setLoading(true);
-    try {
-      const data = await loginUser(phoneNo, loginPassword);
-      setLoading(false);
-
-      // Assuming successful login returns a user object with userId
-      Alert.alert('Success', 'Logged in successfully.');
-      onLoginSuccess(data.UserId); // Update according to your API response
-      navigation.navigate('Search', { userId: data.UserId });
-    } catch (error) {
-      setLoading(false);
-      if (error.response && error.response.data) {
-        Alert.alert('Error', error.response.data.message || 'Invalid phone number or password.');
-      } else {
-        Alert.alert('Error', 'An unexpected error occurred.');
+  // Fetch users on mount
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        const usersData = await fetchUsers();
+        setUsers(usersData);
+      } catch {
+        Alert.alert('Error', 'Unable to fetch users.');
       }
+    };
+
+    loadUsers();
+  }, []);
+
+  // Login handler
+  const handleLogin = () => {
+    setLoading(true);
+    const user = users.find(
+      (user) =>
+        user.phone_number === loginData.phoneNo &&
+        user.password_hash === loginData.loginPassword
+    );
+    setLoading(false);
+
+    if (user) {
+      Alert.alert('Success', 'Logged in successfully.');
+      onLoginSuccess(user.UserId);
+      navigation.navigate('Search', { userId: user.UserId });
+    } else {
+      Alert.alert('Error', 'Invalid phone number or password.');
     }
   };
 
+  // Signup handler
   const handleSignup = async () => {
+    const { signupPassword, signupConfirmPassword } = signupData;
+
     if (signupPassword !== signupConfirmPassword) {
       Alert.alert('Error', 'Passwords do not match.');
       return;
@@ -54,20 +125,34 @@ const LoginScreen: React.FC<LoginScreenProps & { onLoginSuccess: (userId: string
 
     setLoading(true);
     try {
-      const userData = await registerUser(signupName, signupEmail, signupPhone, signupPassword, country, city);
-      setLoading(false);
-      Alert.alert('Success', 'Registration successful.');
-      // You can navigate to the login screen after successful signup
-      setIsLogin(true); // Switch to login view
+      await registerUser(
+        signupData.signupName,
+        signupData.signupEmail,
+        signupData.signupPhone,
+        signupData.signupPassword,
+        signupData.country,
+        signupData.city
+      );
+      Alert.alert('Success', 'Registration successful');
+      navigation.navigate('Login'); // Optionally navigate to Login after successful signup
     } catch (error: any) {
+      Alert.alert('Error', error.message || 'An unexpected error occurred.');
+    } finally {
       setLoading(false);
-      if (error.response && error.response.data) {
-        Alert.alert('Error', error.response.data.message || 'An unexpected error occurred.');
-      } else {
-        Alert.alert('Error', 'An unexpected error occurred.');
-      }
     }
   };
+
+  // Render input field
+  const renderInput = (placeholder: string, value: string, onChange: (text: string) => void, secureTextEntry = false) => (
+    <TextInput
+      style={styles.input}
+      placeholder={placeholder}
+      placeholderTextColor="#888"
+      secureTextEntry={secureTextEntry}
+      value={value}
+      onChangeText={onChange}
+    />
+  );
 
   return (
     <View style={styles.container}>
@@ -84,99 +169,44 @@ const LoginScreen: React.FC<LoginScreenProps & { onLoginSuccess: (userId: string
         <View style={[styles.tabIndicator, { left: isLogin ? '0%' : '70%' }]} />
       </ImageBackground>
 
-      {isLogin ? (
-        <View style={styles.formContainer}>
-          <TextInput
-            style={styles.input}
-            placeholder="Phone Number"
-            placeholderTextColor="#888"
-            value={phoneNo}
-            onChangeText={setPhoneNo}
-          />
-          <View style={styles.passwordContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder="Password"
-              placeholderTextColor="#888"
-              secureTextEntry={!showPassword}
-              value={loginPassword}
-              onChangeText={setLoginPassword}
-            />
-            <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
-              <MaterialCommunityIcons name={showPassword ? 'eye-off' : 'eye'} size={24} color="#888" />
+      <View style={styles.formContainer}>
+        {isLogin ? (
+          <>
+            {renderInput('Phone Number', loginData.phoneNo, (text) => handleLoginChange('phoneNo', text))}
+            <View style={styles.passwordContainer}>
+              {renderInput('Password', loginData.loginPassword, (text) => handleLoginChange('loginPassword', text), !showPassword)}
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+                <MaterialCommunityIcons name={showPassword ? 'eye-off' : 'eye'} size={24} color="#888" />
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
+              {loading ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.loginButtonText}>Login</Text>}
             </TouchableOpacity>
-          </View>
-          <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-            {loading ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.loginButtonText}>Login</Text>}
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <View style={styles.formContainer}>
-          <TextInput
-            style={styles.input}
-            placeholder="Full Name"
-            placeholderTextColor="#888"
-            value={signupName}
-            onChangeText={setSignupName}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Email"
-            placeholderTextColor="#888"
-            value={signupEmail}
-            onChangeText={setSignupEmail}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Phone Number"
-            placeholderTextColor="#888"
-            value={signupPhone}
-            onChangeText={setSignupPhone}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="City"
-            placeholderTextColor="#888"
-            value={city}
-            onChangeText={setCity}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Country"
-            placeholderTextColor="#888"
-            value={country}
-            onChangeText={setCountry}
-          />
-          <View style={styles.passwordContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder="Password"
-              placeholderTextColor="#888"
-              secureTextEntry={!showPassword}
-              value={signupPassword}
-              onChangeText={setSignupPassword}
-            />
-            <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
-              <MaterialCommunityIcons name={showPassword ? 'eye-off' : 'eye'} size={24} color="#888" />
+          </>
+        ) : (
+          <>
+            {renderInput('Full Name', signupData.signupName, (text) => handleSignupChange('signupName', text))}
+            {renderInput('Email', signupData.signupEmail, (text) => handleSignupChange('signupEmail', text))}
+            {renderInput('Phone Number', signupData.signupPhone, (text) => handleSignupChange('signupPhone', text))}
+            {renderInput('City', signupData.city, (text) => handleSignupChange('city', text))}
+            {renderInput('Country', signupData.country, (text) => handleSignupChange('country', text))}
+            <View style={styles.passwordContainer}>
+              {renderInput('Password', signupData.signupPassword, (text) => handleSignupChange('signupPassword', text), !showPassword)}
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+                <MaterialCommunityIcons name={showPassword ? 'eye-off' : 'eye'} size={24} color="#888" />
+              </TouchableOpacity>
+            </View>
+            {renderInput('Confirm Password', signupData.signupConfirmPassword, (text) => handleSignupChange('signupConfirmPassword', text), true)}
+            <TouchableOpacity style={styles.loginButton} onPress={handleSignup}>
+              {loading ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.loginButtonText}>Create Account</Text>}
             </TouchableOpacity>
-          </View>
-          <TextInput
-            style={styles.input}
-            placeholder="Confirm Password"
-            placeholderTextColor="#888"
-            secureTextEntry
-            value={signupConfirmPassword}
-            onChangeText={setSignupConfirmPassword}
-          />
-          <TouchableOpacity style={styles.loginButton} onPress={handleSignup}>
-            {loading ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.loginButtonText}>Create Account</Text>}
-          </TouchableOpacity>
-        </View>
-      )}
+          </>
+        )}
 
-      <TouchableOpacity>
-        <Text style={styles.forgotPassword}>Forgot Password?</Text>
-      </TouchableOpacity>
+        <TouchableOpacity>
+          <Text style={styles.forgotPassword}>Forgot Password?</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -189,7 +219,6 @@ const styles = StyleSheet.create({
   backgroundImage: {
     width: '100%',
     height: 150,
-    flexDirection: 'column',
     justifyContent: 'space-between',
     paddingVertical: 20,
     alignItems: 'flex-start',
@@ -238,14 +267,14 @@ const styles = StyleSheet.create({
   eyeIcon: {
     position: 'absolute',
     right: 15,
-    top: 15,
+    top: 13,
   },
   loginButton: {
     backgroundColor: '#00D6BE',
     paddingVertical: 15,
     borderRadius: 10,
     alignItems: 'center',
-    marginTop: 10,
+    marginBottom: 20,
   },
   loginButtonText: {
     color: '#fff',
@@ -253,8 +282,8 @@ const styles = StyleSheet.create({
   },
   forgotPassword: {
     color: '#fff',
+    textDecorationLine: 'underline',
     textAlign: 'center',
-    marginTop: 15,
   },
 });
 

@@ -183,7 +183,7 @@ const GoogleMapscreen: React.FC = () => {
                         >
                             <View style={[styles.marker, { backgroundColor: marker.status === "InProgress" ? 'orange' : (marker.IsPaid ? '#018E42' : '#FF3562') }]} >
                                 <Icon name="tint" size={15} color="white" />
-                                <Text style={styles.markerText}>{marker.area}</Text>
+                                <Text style={styles.markerText}>{marker.price}</Text>
                             </View>
                         </Marker>
                     ))}

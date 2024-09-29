@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Make sure this URL matches the backend
-const API_URL = 'https://mapmatrixbackend-production.up.railway.app/api/auth'; // Include /api/auth
+const API_URL = 'https://mapmatrixbackend-production.up.railway.app/api/auth/users'; // Include /api/auth
 
 export const loginUser = async (phoneNo: string, password: string) => {
   const response = await axios.post(`${API_URL}/login`, {
