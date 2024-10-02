@@ -6,25 +6,29 @@ const SearchResultsScreen = ({ route }) => {
     const navigation = useNavigation();
     const { results } = route.params;
 
+    // Log results to debug
+    console.log(results);
+
+    // Optionally filter out results without a PropertyId
+    const validResults = results.filter(item => item.PropertyId != null);
+
     const handleItemPress = (item) => {
-        // Pass only the id to the DetailedPage
-        navigation.navigate('Detailedpage', { id: item.id });
+        // Pass only the PropertyId to the DetailedPage
+        navigation.navigate('Detailedpage', { id: item.PropertyId });
     };
 
     return (
         <View style={styles.container}>
-            {/* Header */}
             <Text style={styles.header}>
-                {results.length} {results.length === 1 ? 'Result' : 'Results'} Found
+                {validResults.length} {validResults.length === 1 ? 'Result' : 'Results'} Found
             </Text>
 
-            {/* Display results */}
-            {results.length === 0 ? (
+            {validResults.length === 0 ? (
                 <Text style={styles.emptyText}>No results found.</Text>
             ) : (
                 <FlatList
-                    data={results}
-                    keyExtractor={(item) => item.id.toString()} // Ensure id is a string
+                    data={validResults}
+                    keyExtractor={(item) => item.PropertyId ? item.PropertyId.toString() : Math.random().toString()}
                     renderItem={({ item }) => (
                         <TouchableOpacity onPress={() => handleItemPress(item)} style={styles.resultItem}>
                             <Image source={require('../images/home.jpg')} style={styles.image} />

@@ -2,19 +2,44 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Image, ScrollView, Dimensions, TouchableOpacity, Linking } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import axios from 'axios'; // Ensure axios is installed
-import dummyData from './dummyData'; // Adjust the import path as necessary
 
 const { width: screenWidth } = Dimensions.get('window'); // Get screen width
 
 const Detailedpage: React.FC = () => {
     const route = useRoute();
-    const { id } = route.params;
+    const { id } = route.params; // Get the property ID from the route
 
-    // Find the marker data using the ID
-    const markerData = dummyData.find(item => item.id === id) || {};
-
+    const [propertyData, setPropertyData] = useState({});
     const [nearbyFacilities, setNearbyFacilities] = useState([]);
-    const { latitude, longitude } = markerData; // Assume these fields exist in markerData
+
+    // Fetch all property data and find the one with the matching ID
+    useEffect(() => {
+        const fetchPropertyData = async () => {
+            try {
+                const response = await axios.get('https://mapmatrixbackend-production.up.railway.app/api/property/properties/');
+                const properties = response.data;
+
+                // Find the property that matches the id from the route
+                const property = properties.find(item => item.PropertyId === parseInt(id));
+
+                if (property) {
+                    setPropertyData(property);
+                } else {
+                    console.error('Property not found');
+                }
+            } catch (error) {
+                console.error('Error fetching property data:', error);
+            }
+        };
+
+        if (id) {
+            fetchPropertyData();
+        }
+    }, [id]);
+
+    const { geometry, title, address, area, kitchen, water, electricity, furnished, price, description } = propertyData;
+    const latitude = geometry?.y;
+    const longitude = geometry?.x;
 
     // Fetch nearby facilities from Google Maps Places API
     useEffect(() => {
@@ -35,7 +60,6 @@ const Detailedpage: React.FC = () => {
                 facilities.forEach(place => {
                     if (place.types) {
                         place.types.forEach(type => {
-                            // Ensure we only get one facility per type
                             if (!uniqueFacilities[type]) {
                                 if (type === 'grocery_or_supermarket') {
                                     uniqueFacilities['Minimarket'] = {
@@ -95,13 +119,13 @@ const Detailedpage: React.FC = () => {
             </View>
 
             <View style={styles.propertyDetailsContainer}>
-                <Text style={styles.title}>{markerData.title || 'Property Title'}</Text>
+                <Text style={styles.title}>{title || 'Property Title'}</Text>
 
                 <View style={styles.propertyInfo}>
                     <Text style={styles.infoText}>⭐ 4.8 (73 reviews)</Text>
-                    <Text style={styles.infoText}>2 rooms</Text>
-                    <Text style={styles.infoText}>📍 {markerData.address || 'Location'}</Text>
-                    <Text style={styles.infoText}>📏 {markerData.area} m²</Text>
+                    <Text style={styles.infoText}>{propertyData.bedrooms}  🛏️ rooms</Text>
+                    <Text style={styles.infoText}>📍 {address || 'Location'}</Text>
+                    <Text style={styles.infoText}>📏 {area} m²</Text>
                 </View>
             </View>
 
@@ -117,16 +141,17 @@ const Detailedpage: React.FC = () => {
             </View>
 
             <View style={styles.sectionContainer}>
-    <Text style={styles.heading}>Home facilities</Text>
-    <View style={styles.facilitiesRow}>
-        <Text style={styles.facility}>🍳 Kitchen: {markerData.kitchen ? 'Yes' : 'No'}</Text>
-        <Text style={[styles.facility, styles.leftAligned]}>💧 Water: {markerData.water ? 'Yes' : 'No'}</Text>
-    </View>
-    <View style={styles.facilitiesRow}>
-        <Text style={styles.facility}>⚡ Electricity: {markerData.electricity ? 'Yes' : 'No'}</Text>
-        <Text style={[styles.facility, styles.leftAligned]}>🪑 Furnished: {markerData.furnished ? 'Yes' : 'No'}</Text>
-    </View>
-</View>
+                <Text style={styles.heading}>Home facilities</Text>
+                <View style={styles.facilitiesRow}>
+                    <Text style={styles.facility}>🍳 Kitchen: {kitchen ? 'Yes' : 'No'}</Text>
+                    <Text style={[styles.facility, styles.leftAligned]}>💧 Water: {water ? 'Yes' : 'No'}</Text>
+                </View>
+                <View style={styles.facilitiesRow}>
+                    <Text style={styles.facility}>⚡ Electricity: {electricity ? 'Yes' : 'No'}</Text>
+                    <Text style={[styles.facility, styles.leftAligned]}>🪑 Furnished: {furnished ? 'Yes' : 'No'}</Text>
+                </View>
+            </View>
+
             <TouchableOpacity style={styles.mapContainer} onPress={openMap}>
                 <View style={styles.mapPlaceholder}>
                     <Image
@@ -154,13 +179,13 @@ const Detailedpage: React.FC = () => {
             <View style={styles.sectionContainer}>
                 <Text style={styles.heading}>About location's neighborhood</Text>
                 <Text style={styles.description}>
-                    {markerData.description || 'No description available.'}
+                    {description || 'No description available.'}
                 </Text>
             </View>
 
             <View style={styles.costContainer}>
                 <Text style={styles.costText}>Price</Text>
-                <Text style={styles.costAmount}>${markerData.price}/month</Text>
+                <Text style={styles.costAmount}>${price}/month</Text>
             </View>
         </ScrollView>
     );
