@@ -1,11 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, ScrollView } from 'react-native';
-import MapView, { PROVIDER_GOOGLE, Marker, Region } from 'react-native-maps';
+import MapView, { PROVIDER_GOOGLE, Marker } from 'react-native-maps';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { useNavigation } from '@react-navigation/native';
 import axios from 'axios';
 import darkModeStyle from './darkModeStyle';
 import CheckBox from '@react-native-community/checkbox';
+import Geocoder from 'react-native-geocoding';
+import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
+
+Geocoder.init('AIzaSyCbuY6KKFkmb4wkMzCsOskkxd7btxHCZ-w');
 
 const API_BASE_URL = "https://mapmatrixbackend-production.up.railway.app/api/property/properties";
 
@@ -27,35 +31,30 @@ const GoogleMapscreen: React.FC = () => {
         const fetchProperties = async () => {
             try {
                 const response = await axios.get(API_BASE_URL);
-                console.log('API Response:', response.data); // Log the full response
+                console.log('API Response:', response.data); 
                 const properties = response.data;
 
                 const formattedMarkers = properties.map(property => {
-                    const longitude = property.geometry.x; // Longitude
-                    const latitude = property.geometry.y; // Latitude
+                    const longitude = property.geometry.x; 
+                    const latitude = property.geometry.y; 
 
-                    // Log original coordinates for debugging
-                    console.log('Original coordinates:', longitude, latitude);
-
-                    // Check if latitude and longitude are finite numbers
                     if (typeof latitude !== 'number' || !isFinite(latitude) || typeof longitude !== 'number' || !isFinite(longitude)) {
                         console.warn(`Invalid coordinates for property ID ${property.PropertyId}:`, { latitude, longitude });
-
-                        return null; // Skip this marker
+                        return null; 
                     }
 
                     return {
                         id: property.PropertyId,
                         title: property.title,
                         description: property.description,
-                        price: parseFloat(property.price), // Ensure price is a number
-                        latitude, // No transformation needed
-                        longitude, // No transformation needed
+                        price: parseFloat(property.price),
+                        latitude,
+                        longitude,
                         type: property.type,
                         status: property.status,
                         IsPaid: parseFloat(property.price) > 0,
                     };
-                }).filter(marker => marker !== null); // Remove any null markers
+                }).filter(marker => marker !== null); 
 
                 console.log('Fetched markers:', formattedMarkers);
                 setMarkers(formattedMarkers);
@@ -77,10 +76,36 @@ const GoogleMapscreen: React.FC = () => {
         return markers.filter(marker => {
             const typeFilterMatch = activeFilters.includes(marker.type) || activeFilters.includes("All");
             const statusFilterMatch = activeFilters.includes(marker.status) || !activeFilters.some(filter => statusOptions.includes(filter));
-            const paymentFilterMatch = (isPaidChecked && marker.IsPaid === 1) || (isUnpaidChecked && marker.IsPaid === 0) || (!isPaidChecked && !isUnpaidChecked);
+            const paymentFilterMatch = (isPaidChecked && marker.IsPaid) || (isUnpaidChecked && !marker.IsPaid) || (!isPaidChecked && !isUnpaidChecked);
             const searchFilterMatch = filter ? marker.price.toString().includes(filter) : true;
             return typeFilterMatch && statusFilterMatch && paymentFilterMatch && searchFilterMatch;
         });
+    };
+
+    const handleLocationSearch = async (locationName: string) => {
+        try {
+            const response = await Geocoder.from(locationName);
+            const { lat, lng } = response.results[0].geometry.location;
+    
+            setLocation({
+                latitude: lat,
+                longitude: lng,
+                latitudeDelta: 0.05,
+                longitudeDelta: 0.05,
+            });
+    
+            if (mapViewRef.current) {
+                mapViewRef.current.animateToRegion({
+                    latitude: lat,
+                    longitude: lng,
+                    latitudeDelta: 0.05,
+                    longitudeDelta: 0.05,
+                }, 1000);
+            }
+        } catch (error) {
+            console.error('Error finding location:', error);
+            Alert.alert('Error', 'Could not find location.');
+        }
     };
 
     const markersToDisplay = filteredMarkers();
@@ -116,8 +141,10 @@ const GoogleMapscreen: React.FC = () => {
                 <View style={styles.searchBar}>
                     <TextInput
                         style={styles.searchInput}
-                        placeholder="Search by Price"
+                        placeholder="Enter location"
                         placeholderTextColor="gray"
+                        fetchDetails={true}
+                        onSubmitEditing={(event) => handleLocationSearch(event.nativeEvent.text)}
                         onChangeText={text => setFilter(text)}
                     />
                     <Icon name="search" size={20} color="gray" style={styles.searchIcon} />
@@ -151,12 +178,13 @@ const GoogleMapscreen: React.FC = () => {
                 provider={PROVIDER_GOOGLE}
                 style={styles.map}
                 region={location}
+                mapType={mapType} // Passing the mapType state
                 customMapStyle={darkModeStyle}
             >
                 {markersToDisplay.length > 0 ? (
                     markersToDisplay.map(marker => (
                         <Marker
-                            key={marker.id} // Unique key for each marker
+                            key={marker.id}
                             coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
                             onPress={() => (navigation as any).navigate('Detailedpage', { id: marker.id })}
                         >
@@ -175,7 +203,6 @@ const GoogleMapscreen: React.FC = () => {
                 <Icon name="crosshairs" size={20} color="white" />
             </TouchableOpacity>
 
-
             <TouchableOpacity style={styles.toggleMapTypeButton} onPress={toggleMapType}>
                 <Icon name="globe" size={20} color="white" />
             </TouchableOpacity>
@@ -183,7 +210,6 @@ const GoogleMapscreen: React.FC = () => {
             <TouchableOpacity style={styles.favouritesButton} onPress={() => (navigation as any).navigate('Favourites')}>
                 <Icon name="heart-o" size={20} color="white" />
             </TouchableOpacity>
-
 
             <TouchableOpacity style={styles.listButton} onPress={() => (navigation as any).navigate('AdvancedSearch')}>
                 <Icon name="list" size={20} color="white" />
@@ -198,7 +224,6 @@ const GoogleMapscreen: React.FC = () => {
                             style={[styles.bottomButton, activeFilters.includes(buttonName) && { backgroundColor: '#38ADA9' }]}
                             onPress={() => toggleFilter(buttonName)}
                         >
-                            <Icon name={buttonName === "InProgress" ? "wrench" : buttonName === "Dis-Conn" ? "times-circle" : buttonName === "Conflict" ? "bolt" : buttonName === "New" ? "star" : "file-text-o"} size={20} color={styles.bottomButtonText.color} style={styles.icon} />
                             <Text style={[styles.bottomButtonText, activeFilters.includes(buttonName) && { color: 'white' }]}>{buttonName}</Text>
                         </TouchableOpacity>
                     ))}

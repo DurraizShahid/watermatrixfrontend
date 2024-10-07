@@ -10,18 +10,16 @@ const Detailedpage: React.FC = () => {
     const { id } = route.params; // Get the property ID from the route
 
     const [propertyData, setPropertyData] = useState({});
+    const [propertyImages, setPropertyImages] = useState([]); // State to store images
     const [nearbyFacilities, setNearbyFacilities] = useState([]);
 
-    // Fetch all property data and find the one with the matching ID
+    // Fetch property data
     useEffect(() => {
         const fetchPropertyData = async () => {
             try {
                 const response = await axios.get('https://mapmatrixbackend-production.up.railway.app/api/property/properties/');
                 const properties = response.data;
-
-                // Find the property that matches the id from the route
                 const property = properties.find(item => item.PropertyId === parseInt(id));
-
                 if (property) {
                     setPropertyData(property);
                 } else {
@@ -34,6 +32,22 @@ const Detailedpage: React.FC = () => {
 
         if (id) {
             fetchPropertyData();
+        }
+    }, [id]);
+
+    // Fetch property images
+    useEffect(() => {
+        const fetchPropertyImages = async () => {
+            try {
+                const response = await axios.get(`https://mapmatrixbackend-production.up.railway.app/api/property/images/${id}`);
+                setPropertyImages(response.data); // Set the fetched images
+            } catch (error) {
+                console.error('Error fetching property images:', error);
+            }
+        };
+
+        if (id) {
+            fetchPropertyImages();
         }
     }, [id]);
 
@@ -110,20 +124,27 @@ const Detailedpage: React.FC = () => {
 
     return (
         <ScrollView style={styles.container} horizontal={false}>
-            {/* Image at the top, full width of the screen */}
+            {/* Carousel for images */}
             <View style={styles.imageCarouselContainer}>
-                <Image source={require('../images/home.jpg')} style={styles.topImage} />
+                {propertyImages.length > 0 ? (
+                    propertyImages.map((image, index) => (
+                        <Image key={index} source={{ uri: image.image_url }} style={styles.topImage} />
+                    ))
+                ) : (
+                    <Image source={require('../images/home.jpg')} style={styles.topImage} />
+                )}
                 <View style={styles.imageCountContainer}>
-                    <Text style={styles.imageCountText}>1 / 11</Text>
+                    <Text style={styles.imageCountText}>{propertyImages.length > 0 ? `1 / ${propertyImages.length}` : '1 / 1'}</Text>
                 </View>
             </View>
 
+            {/* Property details */}
             <View style={styles.propertyDetailsContainer}>
                 <Text style={styles.title}>{title || 'Property Title'}</Text>
 
                 <View style={styles.propertyInfo}>
                     <Text style={styles.infoText}>⭐ 4.8 (73 reviews)</Text>
-                    <Text style={styles.infoText}>{propertyData.bedrooms}  🛏️ rooms</Text>
+                    <Text style={styles.infoText}>{propertyData.bedrooms} 🛏️ rooms</Text>
                     <Text style={styles.infoText}>📍 {address || 'Location'}</Text>
                     <Text style={styles.infoText}>📏 {area} m²</Text>
                 </View>
@@ -132,7 +153,7 @@ const Detailedpage: React.FC = () => {
             <View style={styles.ownerInfoContainer}>
                 <Image source={require('../images/profile.jpeg')} style={styles.ownerImage} />
                 <View>
-                    <Text style={styles.ownerName}>Louise Vuitton</Text>
+                    <Text style={styles.ownerName}>Naeem Minhas</Text>
                     <Text style={styles.ownerRole}>Property owner</Text>
                 </View>
                 <TouchableOpacity style={styles.contactButton}>
@@ -190,6 +211,7 @@ const Detailedpage: React.FC = () => {
         </ScrollView>
     );
 };
+
 
 const styles = StyleSheet.create({
     container: {
