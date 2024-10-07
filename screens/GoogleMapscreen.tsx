@@ -28,7 +28,7 @@ const GoogleMapscreen: React.FC = () => {
   const navigation = useNavigation();
 
   const filterOptions = ['All', 'Commercial', 'Residential'];
-  const statusOptions = ['InProgress', 'DisConn', 'Conflict', 'New', 'Notice'];
+  const statusOptions = ['InProgress', 'Dis-Conn', 'Conflict', 'New', 'Notice'];
 
   // Batch Fetch Properties and Polygons in Parallel
   useEffect(() => {
@@ -51,13 +51,18 @@ const GoogleMapscreen: React.FC = () => {
         })).filter(marker => marker.latitude && marker.longitude);
 
         const polygons = polygonsRes.data.map(plot => ({
-          id: plot.plotid,
-          coordinates: plot.SHAPE[0].map(coord => ({
-            latitude: coord.y,
-            longitude: coord.x
-          })),
-          address1: plot.address1,
-        }));
+            id: plot.id,
+            coordinates: plot.WKT[0][0].map(coord => ({
+              latitude: coord.y,
+              longitude: coord.x
+            })),
+            address1: plot.propertyno, // You can replace this with the appropriate property if needed
+            dimension: plot.dimension,
+            landuse_su: plot.landuse_su,
+            landuse__1: plot.landuse__1,
+            sub_sector: plot.sub_sector,
+            sector: plot.sector,
+          }));
 
         setMarkers(properties);
         setPolygons(polygons);
