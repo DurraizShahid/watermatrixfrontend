@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, ScrollView } from 'react-native';
-import MapView, { PROVIDER_GOOGLE, Marker } from 'react-native-maps';
+import MapView, { PROVIDER_GOOGLE, Marker, Polygon } from 'react-native-maps';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { useNavigation } from '@react-navigation/native';
 import axios from 'axios';
@@ -8,229 +8,221 @@ import darkModeStyle from './darkModeStyle';
 import CheckBox from '@react-native-community/checkbox';
 import Geocoder from 'react-native-geocoding';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
+import { debounce } from 'lodash';
 
-Geocoder.init('AIzaSyCbuY6KKFkmb4wkMzCsOskkxd7btxHCZ-w');
+Geocoder.init('YOUR_GOOGLE_API_KEY'); // Replace with your actual API key
 
 const API_BASE_URL = "https://mapmatrixbackend-production.up.railway.app/api/property/properties";
+const API_POLYGON_URL = "https://mapmatrixbackend-production.up.railway.app/api/plots/plots";
 
 const GoogleMapscreen: React.FC = () => {
-    const [location, setLocation] = useState({ latitude: 33.6, longitude: 73.1, latitudeDelta: 0.05, longitudeDelta: 0.05 });
-    const [filter, setFilter] = useState<string>('');
-    const [mapType, setMapType] = useState('standard');
-    const [activeFilters, setActiveFilters] = useState<string[]>(["All"]);
-    const [isPaidChecked, setIsPaidChecked] = useState<boolean>(false);
-    const [isUnpaidChecked, setIsUnpaidChecked] = useState<boolean>(false);
-    const [markers, setMarkers] = useState([]);
-    const navigation = useNavigation();
-    const mapViewRef = useRef<MapView | null>(null);
+  const [location, setLocation] = useState({ latitude: 33.6, longitude: 73.1, latitudeDelta: 0.05, longitudeDelta: 0.05 });
+  const [filter, setFilter] = useState<string>('');
+  const [mapType, setMapType] = useState('standard');
+  const [activeFilters, setActiveFilters] = useState<string[]>(['All']);
+  const [isPaidChecked, setIsPaidChecked] = useState<boolean>(false);
+  const [isUnpaidChecked, setIsUnpaidChecked] = useState<boolean>(false);
+  const [markers, setMarkers] = useState([]);
+  const [polygons, setPolygons] = useState([]);
+  const mapViewRef = useRef<MapView | null>(null);
+  const navigation = useNavigation();
 
-    const filterOptions = ["All", "Commercial", "Residential"];
-    const statusOptions = ["InProgress", "Dis-Conn", "Conflict", "New", "Notice"];
+  const filterOptions = ['All', 'Commercial', 'Residential'];
+  const statusOptions = ['InProgress', 'DisConn', 'Conflict', 'New', 'Notice'];
 
-    useEffect(() => {
-        const fetchProperties = async () => {
-            try {
-                const response = await axios.get(API_BASE_URL);
-                console.log('API Response:', response.data); 
-                const properties = response.data;
+  // Batch Fetch Properties and Polygons in Parallel
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [propertiesRes, polygonsRes] = await Promise.all([
+          axios.get(API_BASE_URL),
+          axios.get(API_POLYGON_URL),
+        ]);
+        const properties = propertiesRes.data.map(property => ({
+          id: property.PropertyId,
+          title: property.title,
+          description: property.description,
+          price: parseFloat(property.price),
+          latitude: property.geometry.y,
+          longitude: property.geometry.x,
+          type: property.type,
+          status: property.status,
+          IsPaid: parseFloat(property.price) > 0,
+        })).filter(marker => marker.latitude && marker.longitude);
 
-                const formattedMarkers = properties.map(property => {
-                    const longitude = property.geometry.x; 
-                    const latitude = property.geometry.y; 
+        const polygons = polygonsRes.data.map(plot => ({
+          id: plot.plotid,
+          coordinates: plot.SHAPE[0].map(coord => ({
+            latitude: coord.y,
+            longitude: coord.x
+          })),
+          address1: plot.address1,
+        }));
 
-                    if (typeof latitude !== 'number' || !isFinite(latitude) || typeof longitude !== 'number' || !isFinite(longitude)) {
-                        console.warn(`Invalid coordinates for property ID ${property.PropertyId}:`, { latitude, longitude });
-                        return null; 
-                    }
+        setMarkers(properties);
+        setPolygons(polygons);
 
-                    return {
-                        id: property.PropertyId,
-                        title: property.title,
-                        description: property.description,
-                        price: parseFloat(property.price),
-                        latitude,
-                        longitude,
-                        type: property.type,
-                        status: property.status,
-                        IsPaid: parseFloat(property.price) > 0,
-                    };
-                }).filter(marker => marker !== null); 
-
-                console.log('Fetched markers:', formattedMarkers);
-                setMarkers(formattedMarkers);
-
-                if (formattedMarkers.length > 0) {
-                    const { latitude, longitude } = formattedMarkers[0];
-                    setLocation({ latitude, longitude, latitudeDelta: 0.05, longitudeDelta: 0.05 });
-                }
-            } catch (error) {
-                console.error('Error fetching properties:', error);
-                Alert.alert('Error', 'Could not fetch properties.');
-            }
-        };
-
-        fetchProperties();
-    }, []);
-    
-    const filteredMarkers = () => {
-        return markers.filter(marker => {
-            const typeFilterMatch = activeFilters.includes(marker.type) || activeFilters.includes("All");
-            const statusFilterMatch = activeFilters.includes(marker.status) || !activeFilters.some(filter => statusOptions.includes(filter));
-            const paymentFilterMatch = (isPaidChecked && marker.IsPaid) || (isUnpaidChecked && !marker.IsPaid) || (!isPaidChecked && !isUnpaidChecked);
-            const searchFilterMatch = filter ? marker.price.toString().includes(filter) : true;
-            return typeFilterMatch && statusFilterMatch && paymentFilterMatch && searchFilterMatch;
-        });
-    };
-
-    const handleLocationSearch = async (locationName: string) => {
-        try {
-            const response = await Geocoder.from(locationName);
-            const { lat, lng } = response.results[0].geometry.location;
-    
-            setLocation({
-                latitude: lat,
-                longitude: lng,
-                latitudeDelta: 0.05,
-                longitudeDelta: 0.05,
-            });
-    
-            if (mapViewRef.current) {
-                mapViewRef.current.animateToRegion({
-                    latitude: lat,
-                    longitude: lng,
-                    latitudeDelta: 0.05,
-                    longitudeDelta: 0.05,
-                }, 1000);
-            }
-        } catch (error) {
-            console.error('Error finding location:', error);
-            Alert.alert('Error', 'Could not find location.');
+        if (properties.length > 0) {
+          const { latitude, longitude } = properties[0];
+          setLocation({ latitude, longitude, latitudeDelta: 0.05, longitudeDelta: 0.05 });
         }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        Alert.alert('Error', 'Could not fetch data.');
+      }
     };
 
-    const markersToDisplay = filteredMarkers();
+    fetchData();
+  }, []);
 
-    const centerMapOnLocation = () => {
-        if (location && mapViewRef.current) {
-            mapViewRef.current.animateToRegion(location, 1000);
-        }
-    };
+  // Debounce search input
+  const handleLocationSearch = useCallback(
+    debounce(async (locationName: string) => {
+      try {
+        const response = await Geocoder.from(locationName);
+        const { lat, lng } = response.results[0].geometry.location;
 
-    const toggleMapType = () => {
-        setMapType(prevType => {
-            if (prevType === 'standard') return 'satellite';
-            if (prevType === 'satellite') return 'terrain';
-            if (prevType === 'terrain') return 'hybrid';
-            return 'standard';
-        });
-    };
+        setLocation({ latitude: lat, longitude: lng, latitudeDelta: 0.05, longitudeDelta: 0.05 });
+        mapViewRef.current?.animateToRegion({ latitude: lat, longitude: lng, latitudeDelta: 0.05, longitudeDelta: 0.05 }, 1000);
+      } catch (error) {
+        console.error('Error finding location:', error);
+        Alert.alert('Error', 'Could not find location.');
+      }
+    }, 500), // Debounce for 500ms
+    []
+  );
 
-    const toggleFilter = (filterName: string) => {
-        setActiveFilters(prevFilters => {
-            if (prevFilters.includes(filterName)) {
-                return prevFilters.filter(f => f !== filterName);
-            } else {
-                return [...prevFilters, filterName];
-            }
-        });
-    };
+  // Memoize filtered markers
+  const markersToDisplay = useMemo(() => {
+    return markers.filter(marker => {
+      const typeFilterMatch = activeFilters.includes(marker.type) || activeFilters.includes('All');
+      const statusFilterMatch = activeFilters.includes(marker.status) || !activeFilters.some(filter => statusOptions.includes(filter));
+      const paymentFilterMatch = (isPaidChecked && marker.IsPaid) || (isUnpaidChecked && !marker.IsPaid) || (!isPaidChecked && !isUnpaidChecked);
+      const searchFilterMatch = filter ? marker.price.toString().includes(filter) : true;
+      return typeFilterMatch && statusFilterMatch && paymentFilterMatch && searchFilterMatch;
+    });
+  }, [markers, activeFilters, isPaidChecked, isUnpaidChecked, filter]);
 
-    return (
-        <View style={styles.container}>
-            <View style={styles.filterContainer}>
-                <View style={styles.searchBar}>
-                    <TextInput
-                        style={styles.searchInput}
-                        placeholder="Enter location"
-                        placeholderTextColor="gray"
-                        fetchDetails={true}
-                        onSubmitEditing={(event) => handleLocationSearch(event.nativeEvent.text)}
-                        onChangeText={text => setFilter(text)}
-                    />
-                    <Icon name="search" size={20} color="gray" style={styles.searchIcon} />
-                </View>
+  // Memoize toggleFilter function to avoid recreation on each render
+  const toggleFilter = useCallback((filterName: string) => {
+    setActiveFilters(prevFilters => prevFilters.includes(filterName)
+      ? prevFilters.filter(f => f !== filterName)
+      : [...prevFilters, filterName]);
+  }, []);
 
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
-                    {filterOptions.map((filterName, index) => (
-                        <TouchableOpacity
-                            key={index}
-                            style={[styles.filterButton, activeFilters.includes(filterName) && { backgroundColor: '#38ADA9' }]}
-                            onPress={() => toggleFilter(filterName)}
-                        >
-                            <Text style={[styles.filterText, activeFilters.includes(filterName) && { color: 'white' }]}>{filterName}</Text>
-                        </TouchableOpacity>
-                    ))}
-                </ScrollView>
+  return (
+    <View style={styles.container}>
+      <View style={styles.filterContainer}>
+        <View style={styles.searchBar}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Enter location"
+            placeholderTextColor="gray"
+            onSubmitEditing={(event) => handleLocationSearch(event.nativeEvent.text)}
+            onChangeText={text => setFilter(text)}
+          />
+          <Icon name="search" size={20} color="gray" style={styles.searchIcon} />
+        </View>
 
-                <View style={styles.checkboxContainer}>
-                    <View style={styles.checkbox}>
-                        <CheckBox value={isPaidChecked} onValueChange={setIsPaidChecked} />
-                        <Text style={styles.checkboxLabel}>Paid</Text>
-                    </View>
-                    <View style={styles.checkbox}>
-                        <CheckBox value={isUnpaidChecked} onValueChange={setIsUnpaidChecked} />
-                        <Text style={styles.checkboxLabel}>Unpaid</Text>
-                    </View>
-                </View>
-            </View>
-
-            <MapView
-                provider={PROVIDER_GOOGLE}
-                style={styles.map}
-                region={location}
-                mapType={mapType} // Passing the mapType state
-                customMapStyle={darkModeStyle}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
+          {filterOptions.map((filterName, index) => (
+            <TouchableOpacity
+              key={index}
+              style={[styles.filterButton, activeFilters.includes(filterName) && { backgroundColor: '#38ADA9' }]}
+              onPress={() => toggleFilter(filterName)}
             >
-                {markersToDisplay.length > 0 ? (
-                    markersToDisplay.map(marker => (
-                        <Marker
-                            key={marker.id}
-                            coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
-                            onPress={() => (navigation as any).navigate('Detailedpage', { id: marker.id })}
-                        >
-                            <View style={[styles.marker, { backgroundColor: marker.status === "InProgress" ? 'orange' : (marker.IsPaid ? '#018E42' : '#FF3562') }]}>
-                                <Icon name="tint" size={15} color="white" />
-                                <Text style={styles.markerText}>{marker.price}</Text>
-                            </View>
-                        </Marker>
-                    ))
-                ) : (
-                    <Marker coordinate={location} title="No properties found" />
-                )}
-            </MapView>
-
-            <TouchableOpacity style={styles.currentLocationButton} onPress={centerMapOnLocation}>
-                <Icon name="crosshairs" size={20} color="white" />
+              <Text style={[styles.filterText, activeFilters.includes(filterName) && { color: 'white' }]}>{filterName}</Text>
             </TouchableOpacity>
+          ))}
+        </ScrollView>
 
-            <TouchableOpacity style={styles.toggleMapTypeButton} onPress={toggleMapType}>
-                <Icon name="globe" size={20} color="white" />
-            </TouchableOpacity>
+        <View style={styles.checkboxContainer}>
+          <View style={styles.checkbox}>
+            <CheckBox value={isPaidChecked} onValueChange={setIsPaidChecked} />
+            <Text style={styles.checkboxLabel}>Paid</Text>
+          </View>
+          <View style={styles.checkbox}>
+            <CheckBox value={isUnpaidChecked} onValueChange={setIsUnpaidChecked} />
+            <Text style={styles.checkboxLabel}>Unpaid</Text>
+          </View>
+        </View>
+      </View>
 
-            <TouchableOpacity style={styles.favouritesButton} onPress={() => (navigation as any).navigate('Favourites')}>
-                <Icon name="heart-o" size={20} color="white" />
-            </TouchableOpacity>
+      <MapView
+        provider={PROVIDER_GOOGLE}
+        style={styles.map}
+        region={location}
+        mapType={mapType}
+        customMapStyle={darkModeStyle}
+        ref={mapViewRef}
+      >
+{markersToDisplay.length > 0 ? (
+  markersToDisplay.map(marker => (
+    <Marker
+      key={marker.id}
+      coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
+      onPress={() => navigation.navigate('Detailedpage', { id: marker.id })}
+    >
+      <View style={[styles.marker, { backgroundColor: marker.status === 'InProgress' ? 'orange' : (marker.IsPaid ? '#018E42' : '#FF3562') }]}>
+        {/* Conditional icon rendering based on property type */}
+        {marker.type === 'Residential' ? (
+          <Icon name="home" size={15} color="white" />
+        ) : marker.type === 'Commercial' ? (
+          <Icon name="building" size={15} color="white" />
+        ) : (
+          <Icon name="tint" size={15} color="white" /> // Default icon if type is neither
+        )}
+        <Text style={styles.markerText}>{marker.price}</Text>
+      </View>
+    </Marker>
+  ))
+) : (
+  <Marker coordinate={location} title="No properties found" />
+)}
 
-            <TouchableOpacity style={styles.listButton} onPress={() => (navigation as any).navigate('AdvancedSearch')}>
+        {polygons.length > 0 && polygons.map(polygon => (
+          <Polygon
+            key={polygon.id}
+            coordinates={polygon.coordinates}
+            strokeColor="#F00"
+            fillColor="rgba(255,0,0,0.2)"
+            strokeWidth={2}
+          />
+        ))}
+      </MapView>
+
+      <TouchableOpacity style={styles.currentLocationButton} onPress={() => mapViewRef.current?.animateToRegion(location, 1000)}>
+        <Icon name="crosshairs" size={20} color="white" />
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.toggleMapTypeButton} onPress={() => setMapType(prevType => prevType === 'standard' ? 'satellite' : 'standard')}>
+        <Icon name="globe" size={20} color="white" />
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.listButton} onPress={() => (navigation as any).navigate('AdvancedSearch')}>
                 <Icon name="list" size={20} color="white" />
                 <Text style={styles.listButtonText}>List</Text>
             </TouchableOpacity>
 
-            <View style={styles.bottomScrollContainer}>
+      <TouchableOpacity style={styles.favouritesButton} onPress={() => navigation.navigate('FavouritesScreen')}>
+        <Icon name="heart-o" size={20} color="white" />
+      </TouchableOpacity>        
+      <View style={styles.bottomScrollContainer}>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.bottomScrollContent}>
                     {statusOptions.map((buttonName, index) => (
                         <TouchableOpacity
                             key={index}
-                            style={[styles.bottomButton, activeFilters.includes(buttonName) && { backgroundColor: '#38ADA9' }]}
+                            style={[styles.beottomButton, activeFilters.includes(buttonName) && { backgroundColor: '#38ADA9' }]}
                             onPress={() => toggleFilter(buttonName)}
                         >
+                            <Icon name={buttonName === "InProgress" ? "wrench" : buttonName === "Disconnects" ? "times-circle" : buttonName === "Conflict" ? "bolt" : buttonName === "New" ? "star" : "file-text-o"} size={20} color={styles.bottomButtonText.color} style={styles.icon} />
                             <Text style={[styles.bottomButtonText, activeFilters.includes(buttonName) && { color: 'white' }]}>{buttonName}</Text>
                         </TouchableOpacity>
                     ))}
                 </ScrollView>
             </View>
-        </View>
-    );
+    </View>
+  );
 };
 
 const styles = StyleSheet.create({
@@ -298,7 +290,7 @@ const styles = StyleSheet.create({
     },
     markerText: {
         color: 'white',
-        marginLeft: 1, // Added space between icon and text
+        marginLeft: 1,
     },
     currentLocationButton: {
         position: 'absolute',
@@ -321,7 +313,7 @@ const styles = StyleSheet.create({
     },
     listButtonText: {
         left: 10,
-    },
+    },    
     toggleMapTypeButton: {
         position: 'absolute',
         bottom: 160,
@@ -346,7 +338,7 @@ const styles = StyleSheet.create({
     bottomScrollContent: {
         paddingHorizontal: 10,
     },
-    bottomButton: {
+    beottomButton: {
         backgroundColor: '#19191C',
         borderRadius: 10,
         flexDirection: 'row',

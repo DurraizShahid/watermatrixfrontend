@@ -1,117 +1,113 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, ScrollView, PermissionsAndroid } from 'react-native';
-import MapView, { PROVIDER_GOOGLE, Region, Marker } from 'react-native-maps';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, ScrollView } from 'react-native';
+import MapView, { PROVIDER_GOOGLE, Marker } from 'react-native-maps';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import Geolocation from '@react-native-community/geolocation';
 import { useNavigation } from '@react-navigation/native';
+import axios from 'axios';
 import darkModeStyle from './darkModeStyle';
-import dummyData from './dummyData';
 import CheckBox from '@react-native-community/checkbox';
+import Geocoder from 'react-native-geocoding';
+import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 
+Geocoder.init('AIzaSyCbuY6KKFkmb4wkMzCsOskkxd7btxHCZ-w');
+
+const API_BASE_URL = "https://mapmatrixbackend-production.up.railway.app/api/property/properties";
 
 const GoogleMapscreen: React.FC = () => {
-    const [location, setLocation] = useState<Region | null>(null);
+    const [location, setLocation] = useState({ latitude: 33.6, longitude: 73.1, latitudeDelta: 0.05, longitudeDelta: 0.05 });
     const [filter, setFilter] = useState<string>('');
     const [mapType, setMapType] = useState('standard');
     const [activeFilters, setActiveFilters] = useState<string[]>(["All"]);
     const [isPaidChecked, setIsPaidChecked] = useState<boolean>(false);
     const [isUnpaidChecked, setIsUnpaidChecked] = useState<boolean>(false);
     const [markers, setMarkers] = useState([]);
-    const mapViewRef = useRef<MapView | null>(null);
     const navigation = useNavigation();
+    const mapViewRef = useRef<MapView | null>(null);
 
     const filterOptions = ["All", "Commercial", "Residential"];
     const statusOptions = ["InProgress", "Dis-Conn", "Conflict", "New", "Notice"];
 
-
-    const toggleFilter = (filterName: string) => {
-        if (filterOptions.includes(filterName)) {
-            setActiveFilters(prevFilters => {
-                if (filterName === "All") {
-                    return prevFilters.includes("All") ? [] : ["All"];
-                }
-                return [filterName];
-            });
-        } else if (statusOptions.includes(filterName)) {
-            setActiveFilters((prevFilters) => {
-                if (prevFilters.includes(filterName)) {
-                    return prevFilters.filter(f => f !== filterName);
-                } else {
-                    return [...prevFilters, filterName];
-                }
-            });
-        }
-    };
-
     useEffect(() => {
-        const requestLocationPermission = async () => {
+        const fetchProperties = async () => {
             try {
-                const granted = await PermissionsAndroid.request(
-                    PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-                    {
-                        title: "Location Permission",
-                        message: "This app needs access to your location.",
-                        buttonPositive: "OK",
-                        buttonNegative: "Cancel",
+                const response = await axios.get(API_BASE_URL);
+                console.log('API Response:', response.data); 
+                const properties = response.data;
+
+                const formattedMarkers = properties.map(property => {
+                    const longitude = property.geometry.x; 
+                    const latitude = property.geometry.y; 
+
+                    if (typeof latitude !== 'number' || !isFinite(latitude) || typeof longitude !== 'number' || !isFinite(longitude)) {
+                        console.warn(`Invalid coordinates for property ID ${property.PropertyId}:`, { latitude, longitude });
+                        return null; 
                     }
-                );
-                if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-                    fetchUserLocation();
-                } else {
-                    Alert.alert("Permission Denied", "Location permission denied. App cannot fetch location.");
+
+                    return {
+                        id: property.PropertyId,
+                        title: property.title,
+                        description: property.description,
+                        price: parseFloat(property.price),
+                        latitude,
+                        longitude,
+                        type: property.type,
+                        status: property.status,
+                        IsPaid: parseFloat(property.price) > 0,
+                    };
+                }).filter(marker => marker !== null); 
+
+                console.log('Fetched markers:', formattedMarkers);
+                setMarkers(formattedMarkers);
+
+                if (formattedMarkers.length > 0) {
+                    const { latitude, longitude } = formattedMarkers[0];
+                    setLocation({ latitude, longitude, latitudeDelta: 0.05, longitudeDelta: 0.05 });
                 }
             } catch (error) {
-                console.error("Error requesting location permission:", error);
+                console.error('Error fetching properties:', error);
+                Alert.alert('Error', 'Could not fetch properties.');
             }
         };
 
-        const fetchUserLocation = () => {
-            Geolocation.getCurrentPosition(
-                position => {
-                    const { latitude, longitude } = position.coords;
-                    const initialRegion: Region = {
-                        latitude,
-                        longitude,
-                        latitudeDelta: 0.005,
-                        longitudeDelta: 0.005,
-                    };
-                    setLocation(initialRegion);
-
-                    // Generate random marker positions only once
-                    const generatedMarkers = dummyData.map(item => ({
-                        ...item,
-                        latitude: latitude + (Math.random() - 0.5) * 0.01,
-                        longitude: longitude + (Math.random() - 0.5) * 0.01,
-                    }));
-                    setMarkers(generatedMarkers);
-                },
-                error => {
-                    console.error('Error getting location:', error);
-                    Alert.alert('Error', 'Could not get your location.');
-                },
-                { enableHighAccuracy: false, timeout: 5000, maximumAge: 10000 }
-            );
-        };
-
-        requestLocationPermission();
+        fetchProperties();
     }, []);
-
+    
     const filteredMarkers = () => {
-        if (!location) return [];
-        
-        const isAnyBottomFilterActive = activeFilters.some(filter => statusOptions.includes(filter));
-        
         return markers.filter(marker => {
             const typeFilterMatch = activeFilters.includes(marker.type) || activeFilters.includes("All");
-            const statusFilterMatch = isAnyBottomFilterActive ? activeFilters.some(filter => filter === marker.status) : true;
+            const statusFilterMatch = activeFilters.includes(marker.status) || !activeFilters.some(filter => statusOptions.includes(filter));
             const paymentFilterMatch = (isPaidChecked && marker.IsPaid) || (isUnpaidChecked && !marker.IsPaid) || (!isPaidChecked && !isUnpaidChecked);
-            const searchFilterMatch = marker.price.toString().includes(filter); // Updated for integer comparison
-            
-            return typeFilterMatch && statusFilterMatch && paymentFilterMatch && searchFilterMatch; // Include search filter
+            const searchFilterMatch = filter ? marker.price.toString().includes(filter) : true;
+            return typeFilterMatch && statusFilterMatch && paymentFilterMatch && searchFilterMatch;
         });
     };
+
+    const handleLocationSearch = async (locationName: string) => {
+        try {
+            const response = await Geocoder.from(locationName);
+            const { lat, lng } = response.results[0].geometry.location;
     
+            setLocation({
+                latitude: lat,
+                longitude: lng,
+                latitudeDelta: 0.05,
+                longitudeDelta: 0.05,
+            });
     
+            if (mapViewRef.current) {
+                mapViewRef.current.animateToRegion({
+                    latitude: lat,
+                    longitude: lng,
+                    latitudeDelta: 0.05,
+                    longitudeDelta: 0.05,
+                }, 1000);
+            }
+        } catch (error) {
+            console.error('Error finding location:', error);
+            Alert.alert('Error', 'Could not find location.');
+        }
+    };
+
     const markersToDisplay = filteredMarkers();
 
     const centerMapOnLocation = () => {
@@ -129,14 +125,26 @@ const GoogleMapscreen: React.FC = () => {
         });
     };
 
+    const toggleFilter = (filterName: string) => {
+        setActiveFilters(prevFilters => {
+            if (prevFilters.includes(filterName)) {
+                return prevFilters.filter(f => f !== filterName);
+            } else {
+                return [...prevFilters, filterName];
+            }
+        });
+    };
+
     return (
         <View style={styles.container}>
             <View style={styles.filterContainer}>
                 <View style={styles.searchBar}>
                     <TextInput
                         style={styles.searchInput}
-                        placeholder="Search by Area"
+                        placeholder="Enter location"
                         placeholderTextColor="gray"
+                        fetchDetails={true}
+                        onSubmitEditing={(event) => handleLocationSearch(event.nativeEvent.text)}
                         onChangeText={text => setFilter(text)}
                     />
                     <Icon name="search" size={20} color="gray" style={styles.searchIcon} />
@@ -166,37 +174,33 @@ const GoogleMapscreen: React.FC = () => {
                 </View>
             </View>
 
-            {location && (
-                <MapView
-                    provider={PROVIDER_GOOGLE}
-                    style={styles.map}
-                    ref={mapViewRef}
-                    mapType={mapType}
-                    initialRegion={location}
-                    customMapStyle={darkModeStyle}
-                >
-                    {markersToDisplay.map((marker, index) => (
+            <MapView
+                provider={PROVIDER_GOOGLE}
+                style={styles.map}
+                region={location}
+                mapType={mapType} // Passing the mapType state
+                customMapStyle={darkModeStyle}
+            >
+                {markersToDisplay.length > 0 ? (
+                    markersToDisplay.map(marker => (
                         <Marker
-                            key={index}
+                            key={marker.id}
                             coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
                             onPress={() => (navigation as any).navigate('Detailedpage', { id: marker.id })}
                         >
-                            <View style={[styles.marker, { backgroundColor: marker.status === "InProgress" ? 'orange' : (marker.IsPaid ? '#018E42' : '#FF3562') }]} >
+                            <View style={[styles.marker, { backgroundColor: marker.status === "InProgress" ? 'orange' : (marker.IsPaid ? '#018E42' : '#FF3562') }]}>
                                 <Icon name="tint" size={15} color="white" />
-                                <Text style={styles.markerText}>{marker.area}</Text>
+                                <Text style={styles.markerText}>{marker.price}</Text>
                             </View>
                         </Marker>
-                    ))}
-                </MapView>
-            )}
+                    ))
+                ) : (
+                    <Marker coordinate={location} title="No properties found" />
+                )}
+            </MapView>
 
             <TouchableOpacity style={styles.currentLocationButton} onPress={centerMapOnLocation}>
                 <Icon name="crosshairs" size={20} color="white" />
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.listButton} onPress={() => (navigation as any).navigate('AdvancedSearch')}>
-                <Icon name="list" size={20} color="white" />
-                <Text style={styles.listButtonText}>List</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.toggleMapTypeButton} onPress={toggleMapType}>
@@ -207,6 +211,11 @@ const GoogleMapscreen: React.FC = () => {
                 <Icon name="heart-o" size={20} color="white" />
             </TouchableOpacity>
 
+            <TouchableOpacity style={styles.listButton} onPress={() => (navigation as any).navigate('AdvancedSearch')}>
+                <Icon name="list" size={20} color="white" />
+                <Text style={styles.listButtonText}>List</Text>
+            </TouchableOpacity>
+
             <View style={styles.bottomScrollContainer}>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.bottomScrollContent}>
                     {statusOptions.map((buttonName, index) => (
@@ -215,7 +224,6 @@ const GoogleMapscreen: React.FC = () => {
                             style={[styles.bottomButton, activeFilters.includes(buttonName) && { backgroundColor: '#38ADA9' }]}
                             onPress={() => toggleFilter(buttonName)}
                         >
-                            <Icon name={buttonName === "InProgress" ? "wrench" : buttonName === "Dis-Conn" ? "times-circle" : buttonName === "Conflict" ? "bolt" : buttonName === "New" ? "star" : "file-text-o"} size={20} color={styles.bottomButtonText.color} style={styles.icon} />
                             <Text style={[styles.bottomButtonText, activeFilters.includes(buttonName) && { color: 'white' }]}>{buttonName}</Text>
                         </TouchableOpacity>
                     ))}
