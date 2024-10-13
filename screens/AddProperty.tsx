@@ -9,10 +9,13 @@ import LoginScreen from './LoginScreen';
 import FormData from 'form-data'; // Import FormData for handling file uploads
 
 const AddProperty = () => {
-  const { isLoggedIn, login, logout } = useAuth(); 
+  const { isLoggedIn, login, logout, UserId } = useAuth(); // Move useAuth here
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
+  const [type, setType] = useState('');
+  const [status, setStatus] = useState('');
+
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
   const [zipcode, setZipcode] = useState('');
@@ -25,27 +28,25 @@ const AddProperty = () => {
   const [electricity, setElectricity] = useState(false);
   const [isPaid, setIsPaid] = useState(false);
   const [images, setImages] = useState([]);
-  const [locationName, setLocationName] = useState(''); // Uneditable location name
+  const [locationName, setLocationName] = useState(''); 
   const [longitude, setLongitude] = useState('');
   const [latitude, setLatitude] = useState('');
   const navigation = useNavigation();
 
   const handleSave = async () => {
-    // Validation
-    if (!title || !description || !price || !address || !zipcode || !city || !area || !latitude || !longitude) {
+    console.log('UserId:', UserId);
+    if (!title || !description || !price || !address || !zipcode || !city || !area || !latitude || !longitude || !type || !status) {
       Alert.alert('Error', 'Please fill in all required fields');
       return;
     }
-    const handleLogin = (id: string) => {
-      login(id);
-    };
-  
-     
-    // Create a FormData object to handle property data and images
+
     const formData = new FormData();
+    formData.append('UserId', UserId); 
     formData.append('title', title);
     formData.append('description', description);
     formData.append('price', parseFloat(price));
+    formData.append('type', type);
+    formData.append('status', status);
     formData.append('address', address);
     formData.append('zipcode', zipcode);
     formData.append('city', city);
@@ -57,24 +58,24 @@ const AddProperty = () => {
     formData.append('water', water);
     formData.append('electricity', electricity);
     formData.append('isPaid', isPaid);
-    formData.append('geom', `POINT(${longitude} ${latitude})`); // Send as POINT data type
+    formData.append('latitude', parseFloat(latitude));
+    formData.append('longitude', parseFloat(longitude));
 
-    // Append images to FormData
     images.forEach((image, index) => {
       formData.append('images', {
         uri: image,
-        type: 'image/jpeg', // Adjust as per your images' types
+        type: 'image/jpeg', 
         name: `property_image_${index}.jpg`,
       });
     });
-    console.log('FormData:', formData);
+
     try {
       const response = await axios.post(
         'https://mapmatrixbackend-production.up.railway.app/api/property/addproperty',
         formData,
         {
           headers: {
-          'Content-Type': 'multipart/form-data', // Set content type for file uploads
+            'Content-Type': 'multipart/form-data',
           },
         }
       );
@@ -96,6 +97,8 @@ const AddProperty = () => {
     setTitle('');
     setDescription('');
     setPrice('');
+    setType('');
+    setStatus('');
     setAddress('');
     setZipcode('');
     setCity('');
@@ -112,7 +115,6 @@ const AddProperty = () => {
     setLatitude('');
     setLongitude('');
   };
-
   const handleImagePicker = () => {
     Alert.alert(
       'Add Images',
@@ -150,15 +152,15 @@ const AddProperty = () => {
     });
   };
 
-  const handleLocationSelection = (longitude: { toString: () => React.SetStateAction<string>; }, latitude: { toString: () => React.SetStateAction<string>; }) => {
-    setLongitude(longitude.toString());
-    setLatitude(latitude.toString());
-    fetchLocationName(latitude, longitude); // Fetch location name
+  const handleLocationSelection = (longitude, latitude) => {
+    setLongitude(longitude);
+    setLatitude(latitude);
+    fetchLocationName(parseFloat(latitude), parseFloat(longitude)); // Fetch location name
   };
 
   const fetchLocationName = async (lat: any, lon: any) => {
     try {
-      const response = await axios.get(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lon}&key=YOUR_GOOGLE_API_KEY`);
+      const response = await axios.get(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lon}&key=AIzaSyCbuY6KKFkmb4wkMzCsOskkxd7btxHCZ-w`);
       if (response.data.status === 'OK') {
         const location = response.data.results[0]?.formatted_address || 'Location not found';
         setLocationName(location); // Set location name from API response
@@ -229,7 +231,21 @@ const AddProperty = () => {
           value={price}
           onChangeText={setPrice}
         />
-
+        <TextInput
+          style={styles.input}
+          placeholder="Type"
+          placeholderTextColor="#666"
+         
+          value={type}
+          onChangeText={setType}
+        />
+<TextInput
+          style={styles.input}
+          placeholder="Status"
+          placeholderTextColor="#666"
+          value={status}
+          onChangeText={setStatus}
+        />
         {/* Location field */}
         <Text style={styles.sectionTitle}>Property Location</Text>
         <TouchableOpacity
@@ -311,7 +327,6 @@ const AddProperty = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Switches for additional features */}
         <View style={styles.switchContainer}>
           <Text style={styles.switchLabel}>Furnished</Text>
           <Switch value={furnished} onValueChange={setFurnished} />
@@ -329,13 +344,12 @@ const AddProperty = () => {
           <Switch value={electricity} onValueChange={setElectricity} />
         </View>
 
-        {/* Save button */}
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
           <Text style={styles.saveButtonText}>Save Property</Text>
         </TouchableOpacity>
       </View>
       ): (
-        <LoginScreen navigation={navigation} onLoginSuccess={handleLogin} />
+        <LoginScreen navigation={(navigation as any).navigate('AddProperty')} onLoginSuccess={handleLogin} />
       )}
 
     </ScrollView>
@@ -344,7 +358,7 @@ const AddProperty = () => {
 
 const styles = StyleSheet.create({
   scrollView: {
-    backgroundColor: '#1A1A1D',
+    backgroundColor: 'black',
   },
   container: {
     padding: 20,

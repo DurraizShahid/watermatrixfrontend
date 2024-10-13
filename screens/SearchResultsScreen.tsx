@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { Buffer } from 'buffer'; // Import Buffer for binary data conversion
 
 const SearchResultsScreen = ({ route }) => {
     const navigation = useNavigation();
@@ -17,6 +18,15 @@ const SearchResultsScreen = ({ route }) => {
         navigation.navigate('Detailedpage', { id: item.PropertyId });
     };
 
+    const getImageSource = (photos) => {
+        if (photos && photos.length > 0) {
+            const bufferData = photos[0].data; // Access the binary data
+            const base64Data = Buffer.from(bufferData).toString('base64'); // Convert buffer to base64
+            return { uri: `data:image/jpeg;base64,${base64Data}` }; // Return the base64 image
+        }
+        return require('../images/home.jpg'); // Fallback image
+    };
+
     return (
         <View style={styles.container}>
             <Text style={styles.header}>
@@ -31,7 +41,7 @@ const SearchResultsScreen = ({ route }) => {
                     keyExtractor={(item) => item.PropertyId ? item.PropertyId.toString() : Math.random().toString()}
                     renderItem={({ item }) => (
                         <TouchableOpacity onPress={() => handleItemPress(item)} style={styles.resultItem}>
-                            <Image source={require('../images/home.jpg')} style={styles.image} />
+                            <Image source={getImageSource(item.Photos)} style={styles.image} />
                             <View style={styles.details}>
                                 <Text style={styles.address}>{item.address}</Text>
                                 <Text style={styles.title}>{item.title}</Text>

@@ -165,18 +165,18 @@ const GoogleMapscreen: React.FC = () => {
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
                 <style>
-                    html, body {
-                        margin: 0;
-                        padding: 0;
-                        height: 100%;
-                        width: 100%;
-                    }
-                    #map {
-                        width: 100%;
-                        height: 100vh;
-                        margin: 0;
-                        padding: 0;
-                    }
+                html, body {
+                    margin: 0;
+                    padding: 0;
+                    height: 100%;
+                    width: 100%;
+                }
+                #map {
+                    width: 100%;
+                    height: 100vh;
+                    margin: 0;
+                    padding: 0;
+                }
                 </style>
             </head>
             <body>
@@ -185,17 +185,14 @@ const GoogleMapscreen: React.FC = () => {
                 <script>
                     var map = L.map('map').setView([${location.latitude}, ${location.longitude}], 13);
     
-                    // Use Google Maps tile layer
-                    var googleMapType = '${mapType}';
-                    var googleMapsLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                        maxZoom: 20,
-                        attribution: 'Map data &copy; <a href="https://www.google.com/maps">Google</a>'
+                    L.tileLayer('https://mt1.google.com/vt/lyrs=${mapType}&x={x}&y={y}&z={z}', {
+                        maxZoom: 19,
                     }).addTo(map);
     
                     function addMarkers(markers) {
                         markers.forEach(function(marker) {
                             var markerColor;
-    
+                            
                             if (marker.status === null) {
                                 markerColor = marker.IsPaid ? '#4CAF50' : '#FF0000'; // Green if paid, Red if unpaid
                             } else {
@@ -219,13 +216,13 @@ const GoogleMapscreen: React.FC = () => {
                                         markerColor = '#FF5252'; // Default red color
                                 }
                             }
-    
+                    
                             var markerHtml = 
                                 '<div style="position: relative;">' +
                                     '<div style="background-color: ' + markerColor + '; padding: 5px 8px; border-radius: 5px; display: flex; align-items: center; width: auto; min-width: 70px; justify-content: space-between;">' +
                                         '<span style="color: white; font-weight: bold; margin-right: 3px;">' + marker.price + '</span>' +
                                         '<img src="' + (marker.type === 'Residential' ? 'https://www.svgrepo.com/show/22031/home-icon-silhouette.svg' : 'https://www.svgrepo.com/show/535238/building.svg') + '"' +
-                                            'style="width: 18px; height: 18px; filter: invert(1);" />' +
+                                             'style="width: 18px; height: 18px; filter: invert(1);" />' +
                                     '</div>' +
                                     '<div style="position: absolute; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-top: 8px solid ' + markerColor + ';"></div>' +
                                 '</div>';
@@ -236,7 +233,7 @@ const GoogleMapscreen: React.FC = () => {
                                 iconSize: [90, 40],
                                 iconAnchor: [45, 40]
                             });
-    
+                    
                             L.marker([marker.latitude, marker.longitude], { icon: icon })
                                 .addTo(map)
                                 .on('click', function() {
@@ -252,6 +249,7 @@ const GoogleMapscreen: React.FC = () => {
                         polygons.forEach(function(polygon) {
                             L.polygon(polygon.coordinates, { color: 'blue' })
                                 .addTo(map)
+                                .bindPopup(polygon.title);
                         });
                     }
     
@@ -351,7 +349,7 @@ const GoogleMapscreen: React.FC = () => {
                 <Icon name="crosshairs" size={20} color="white" />
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.toggleMapTypeButton} onPress={() => setMapType(prevType => { const nextType = prevType === 'roadmap' ? 'satellite' : prevType === 'satellite' ? 'terrain' : prevType === 'terrain' ? 'hybrid' : 'roadmap'; webViewRef.current?.injectJavaScript(`updateMap(${JSON.stringify(filteredMarkers())}, ${JSON.stringify(polygons)});`); return nextType; })}>
+            <TouchableOpacity style={styles.toggleMapTypeButton} onPress={() => setMapType(prevType => (prevType === 'standard' ? 'satellite' : 'standard'))}>
                 <Icon name="globe" size={20} color="white" />
             </TouchableOpacity>
 
@@ -360,7 +358,7 @@ const GoogleMapscreen: React.FC = () => {
                 <Text style={styles.listButtonText}>List</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.favouritesButton} onPress={() => navigation.navigate('Favourites')}>
+            <TouchableOpacity style={styles.favouritesButton} onPress={() => navigation.navigate('FavouritesScreen')}>
                 <Icon name="heart-o" size={20} color="white" />
             </TouchableOpacity>
 
