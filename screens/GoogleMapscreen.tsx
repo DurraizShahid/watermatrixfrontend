@@ -17,7 +17,6 @@ type RootStackParamList = {
     Detailedpage: { id: number };
     AdvancedSearch: undefined;
     FavouritesScreen: undefined;
-    // ... (other screens in your navigation stack)
 };
 
 const GoogleMapscreen: React.FC = () => {
@@ -286,6 +285,7 @@ const GoogleMapscreen: React.FC = () => {
         </html>
         `;
     };
+    
 
     return (
         <View style={styles.container}>
