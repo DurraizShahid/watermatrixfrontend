@@ -41,26 +41,27 @@ const GoogleMapscreen: React.FC = () => {
             try {
                 const response = await axios.get(API_BASE_URL);
                 const properties = response.data;
-
-                const formattedMarkers = properties.map(property => {
-                    const longitude = property.geometry.x; 
-                    const latitude = property.geometry.y; 
-
-                    return {
-                        id: property.PropertyId,
-                        title: property.title,
-                        description: property.description,
-                        price: parseFloat(property.price),
-                        latitude,
-                        longitude,
-                        type: property.type,
-                        status: property.status,
-                        IsPaid: parseFloat(property.price) > 0,
-                    };
-                });
-
-                setMarkers(formattedMarkers);
-
+        
+                // Filter out properties where geometry is null or doesn't contain valid coordinates
+                const formattedMarkers = properties
+                    .filter(property => property.geometry && property.geometry.x !== null && property.geometry.y !== null)
+                    .map(property => {
+                        const longitude = property.geometry.x;
+                        const latitude = property.geometry.y;
+        
+                        return {
+                            id: property.PropertyId,
+                            title: property.title,
+                            description: property.description,
+                            price: parseFloat(property.price),
+                            latitude,
+                            longitude,
+                            type: property.type,
+                            status: property.status,
+                            IsPaid: parseFloat(property.price) > 0,
+                        };
+                    });        
+                setMarkers(formattedMarkers);     
                 if (formattedMarkers.length > 0) {
                     setLocation({ latitude: formattedMarkers[0].latitude, longitude: formattedMarkers[0].longitude });
                 }
@@ -68,7 +69,7 @@ const GoogleMapscreen: React.FC = () => {
                 console.error('Error fetching properties:', error);
                 Alert.alert('Error', 'Could not fetch properties.');
             }
-        };
+        };     
 
         const fetchPolygons = async () => {
             try {
@@ -186,8 +187,9 @@ const GoogleMapscreen: React.FC = () => {
     
                     // Use Google Maps tile layer
                     var googleMapType = '${mapType}';
-                    var googleMapsLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    var googleMapsLayer = L.tileLayer('https://maps.googleapis.com/maps/vt?pb=!1m5!1m4!1i{z}!2i{x}!3i{y}!4i256!2m3!1e0!2sm!3i{y}!3m9!2sen-US!3sUS!5e18!12m1!1e68!12m3!1e37!2m1!1ssmartmaps!4e0!23i1301875&key=AIzaSyA49ZSrNSSd35nTc1idC6cIk55_TEj0jlA', {
                         maxZoom: 20,
+                        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
                         attribution: 'Map data &copy; <a href="https://www.google.com/maps">Google</a>'
                     }).addTo(map);
     
@@ -285,7 +287,6 @@ const GoogleMapscreen: React.FC = () => {
         </html>
         `;
     };
-    
 
     return (
         <View style={styles.container}>
@@ -293,7 +294,7 @@ const GoogleMapscreen: React.FC = () => {
                 <View style={styles.searchBar}>
                     <TextInput
                         style={styles.searchInput}
-                        placeholder="Enter location"
+                        placeholder="Find Location via Google"
                         placeholderTextColor="gray"
                         onSubmitEditing={(event) => handleLocationSearch(event.nativeEvent.text)}
                         onChangeText={text => setFilter(text)}

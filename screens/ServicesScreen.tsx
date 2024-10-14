@@ -6,9 +6,9 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 
 const ServicesScreen: React.FC = () => {
   const services = [
-    { id: '1', name: 'Master Database', icon: 'database' },
+    { id: '1', name: 'Master Billing DB', icon: 'database' },
     { id: '2', name: 'Rewards', icon: 'hand-coin' },
-    { id: '3', name: 'Connections Requests', icon: 'connection' },
+    { id: '3', name: 'Service Requests', icon: 'connection' },
     { id: '4', name: 'Dept. Assets', icon: 'crane' },
     { id: '5', name: 'Support', icon: 'headphones' },
   ];

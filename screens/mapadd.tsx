@@ -140,7 +140,7 @@ const Mapp = () => {
                     region={location}
                     showsUserLocation={true}
                     followsUserLocation={true}
-                    customMapStyle={darkModeStyle} // Use dark mode styles correctly
+                    //customMapStyle={darkModeStyle} // Use dark mode styles correctly
                 >
                     {markerPosition && (
                         <Marker

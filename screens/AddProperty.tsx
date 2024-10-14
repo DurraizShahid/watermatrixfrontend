@@ -15,7 +15,6 @@ const AddProperty = () => {
   const [price, setPrice] = useState('');
   const [type, setType] = useState('');
   const [status, setStatus] = useState('');
-
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
   const [zipcode, setZipcode] = useState('');
@@ -35,10 +34,20 @@ const AddProperty = () => {
 
   const handleSave = async () => {
     console.log('UserId:', UserId);
+    console.log(`Submitting longitude: ${longitude}, latitude: ${latitude}`);
+    const validLongitude = parseFloat(longitude);
+    const validLatitude = parseFloat(latitude);
     if (!title || !description || !price || !address || !zipcode || !city || !area || !latitude || !longitude || !type || !status) {
       Alert.alert('Error', 'Please fill in all required fields');
       return;
     }
+
+    if (isNaN(validLongitude) || isNaN(validLatitude)) {
+      Alert.alert('Error', 'Invalid longitude or latitude. Please select a valid location.');
+      return;
+    }
+
+
 
     const formData = new FormData();
     formData.append('UserId', UserId); 
@@ -53,13 +62,13 @@ const AddProperty = () => {
     formData.append('area', parseFloat(area));
     formData.append('bedrooms', bedrooms);
     formData.append('bathrooms', bathrooms);
-    formData.append('furnished', furnished);
-    formData.append('kitchen', kitchen);
-    formData.append('water', water);
-    formData.append('electricity', electricity);
-    formData.append('isPaid', isPaid);
-    formData.append('latitude', parseFloat(latitude));
-    formData.append('longitude', parseFloat(longitude));
+    formData.append('furnished', furnished ? 1 : 0);
+    formData.append('kitchen', kitchen ? 1 : 0);
+    formData.append('water', water ? 1 : 0);
+    formData.append('electricity', electricity ? 1 : 0);
+    formData.append('isPaid', isPaid ? 1 : 0);
+    formData.append('longitude', validLongitude.toString());
+    formData.append('latitude', validLatitude.toString());
 
     images.forEach((image, index) => {
       formData.append('images', {
@@ -152,10 +161,10 @@ const AddProperty = () => {
     });
   };
 
-  const handleLocationSelection = (longitude, latitude) => {
-    setLongitude(longitude);
-    setLatitude(latitude);
-    fetchLocationName(parseFloat(latitude), parseFloat(longitude)); // Fetch location name
+  const handleLocationSelection = (long, lat) => {
+    setLongitude(long.toString());
+    setLatitude(lat.toString());
+    console.log(`Location selected: ${long}, ${lat}`); // Debugging log
   };
 
   const fetchLocationName = async (lat: any, lon: any) => {
@@ -225,7 +234,7 @@ const AddProperty = () => {
         />
         <TextInput
           style={styles.input}
-          placeholder="Price"
+          placeholder="Billing Amount"
           placeholderTextColor="#666"
           keyboardType="numeric"
           value={price}
@@ -251,10 +260,7 @@ const AddProperty = () => {
         <TouchableOpacity
           style={styles.saveButton}
           onPress={() =>(navigation as any).navigate('Mapp', {
-  onSelectLocation: (longitude: { toString: () => React.SetStateAction<string>; }, latitude: { toString: () => React.SetStateAction<string>; }) => {
-    setLongitude(longitude.toString());
-    setLatitude(latitude.toString());
-  }
+          onSelectLocation: handleLocationSelection
 })}
 
       
@@ -265,13 +271,15 @@ const AddProperty = () => {
           style={styles.input}
           placeholder="Longitude"
           value={longitude}
-          editable={false} // Make this field uneditable
+          onChangeText={setLongitude}
+          keyboardType="numeric"
         />
         <TextInput
           style={styles.input}
           placeholder="Latitude"
           value={latitude}
-          editable={false} // Make this field uneditable
+          onChangeText={setLatitude}
+          keyboardType="numeric"
         />
         {/* More fields */}
         <TextInput
@@ -336,7 +344,7 @@ const AddProperty = () => {
           <Switch value={kitchen} onValueChange={setKitchen} />
         </View>
         <View style={styles.switchContainer}>
-          <Text style={styles.switchLabel}>Water Supply</Text>
+          <Text style={styles.switchLabel}>Active water supply?</Text>
           <Switch value={water} onValueChange={setWater} />
         </View>
         <View style={styles.switchContainer}>
@@ -358,7 +366,7 @@ const AddProperty = () => {
 
 const styles = StyleSheet.create({
   scrollView: {
-    backgroundColor: 'black',
+    backgroundColor: '#19191C',
   },
   container: {
     padding: 20,
@@ -383,7 +391,7 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   input: {
-    backgroundColor: '#1A1A1D',
+    backgroundColor: '#3F3F45',
     color: '#fff',
     padding: 10,
     borderRadius: 5,
@@ -394,12 +402,12 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    color: '#45B08C',
+    color: '#1EABA5',
     marginVertical: 10,
     marginTop: 20,
   },
   saveButton: {
-    backgroundColor: '#45B08C',
+    backgroundColor: '#1EABA5',
     padding: 15,
     borderRadius: 5,
     alignItems: 'center',

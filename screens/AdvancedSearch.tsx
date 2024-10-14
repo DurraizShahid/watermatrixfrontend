@@ -41,12 +41,12 @@ const AdvancedSearchScreen = () => {
     }, []);
 
     const menuItems = [
-        { name: 'Search', icon: 'search' },
-        { name: 'Ad/Phone Numbers', icon: 'phone' },
-        { name: 'Parcels and Lands', icon: 'map' }
+        { name: ' Search', icon: 'search' },
+        { name: ' Billing Ref. No.', icon: 'book' },
+        { name: ' Parcels', icon: 'map' }
     ];
 
-    const filterItems = ["New", "InProgress", "Dis-Conn", "Conflict", "Notice", "Comm"];
+    const filterItems = ["New", "InProgress", "DisConn", "Conflict", "Notice", "Comm"];
     const typeItems = [...new Set(properties.map(item => item.type)), 'All'];
     const uniqueCategories = ['All', ...new Set(properties.map(item => item.category))];
     const areaItems = Object.keys(areaMapping);
@@ -123,7 +123,7 @@ const AdvancedSearchScreen = () => {
                         <View style={styles.locationContainer}>
                             <TextInput
                                 style={styles.customLocationInput}
-                                placeholder="Enter a custom location"
+                                placeholder="Enter a plot number"
                                 placeholderTextColor="gray"
                                 value={customLocation}
                                 onChangeText={setCustomLocation}
