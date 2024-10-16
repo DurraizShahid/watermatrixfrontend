@@ -303,7 +303,7 @@ const GoogleMapscreen: React.FC = () => {
                     {filterOptions.map((filterName, index) => (
                         <TouchableOpacity
                             key={index}
-                            style={[styles.filterButton, activeFilters.includes(filterName) && { backgroundColor: '#38ADA9' }]}
+                            style={[styles.filterButton, activeFilters.includes(filterName) && { backgroundColor: '#1EABA5' }]}
                             onPress={() => toggleFilter(filterName)}
                         >
                             <Text style={[styles.filterText, activeFilters.includes(filterName) && { color: 'white' }]}>{filterName}</Text>
@@ -316,7 +316,7 @@ const GoogleMapscreen: React.FC = () => {
                         <CheckBox
                             value={isPaidChecked}
                             onValueChange={() => setIsPaidChecked(!isPaidChecked)}
-                            tintColors={{ true: '#38ADA9', false: 'gray' }}
+                            tintColors={{ true: '#1EABA5', false: 'gray' }}
                         />
                         <Text style={styles.checkboxLabel}>Show Paid</Text>
                     </View>
@@ -324,7 +324,7 @@ const GoogleMapscreen: React.FC = () => {
                         <CheckBox
                             value={isUnpaidChecked}
                             onValueChange={() => setIsUnpaidChecked(!isUnpaidChecked)}
-                            tintColors={{ true: '#38ADA9', false: 'gray' }}
+                            tintColors={{ true: '#1EABA5', false: 'gray' }}
                         />
                         <Text style={styles.checkboxLabel}>Show Unpaid</Text>
                     </View>

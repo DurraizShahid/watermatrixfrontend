@@ -177,7 +177,7 @@ const GoogleMapscreen: React.FC = () => {
   {filterOptions.map((filterName, index) => (
     <TouchableOpacity
       key={index}
-      style={[styles.filterButton, activeFilters.includes(filterName) && { backgroundColor: '#38ADA9' }]}
+      style={[styles.filterButton, activeFilters.includes(filterName) && { backgroundColor: '#1EABA5' }]}
       onPress={() => toggleFilter(filterName)}
     >
       <Text style={[styles.filterText, activeFilters.includes(filterName) && { color: 'white' }]}>{filterName}</Text>
@@ -261,7 +261,7 @@ const GoogleMapscreen: React.FC = () => {
                     {statusOptions.map((buttonName, index) => (
                         <TouchableOpacity
                             key={index}
-                            style={[styles.beottomButton, activeFilters.includes(buttonName) && { backgroundColor: '#38ADA9' }]}
+                            style={[styles.beottomButton, activeFilters.includes(buttonName) && { backgroundColor: '#1EABA5' }]}
                             onPress={() => toggleFilter(buttonName)}
                         >
                             <Icon name={buttonName === "InProgress" ? "wrench" : buttonName === "Disconnects" ? "times-circle" : buttonName === "Conflict" ? "bolt" : buttonName === "New" ? "star" : "file-text-o"} size={20} color={styles.bottomButtonText.color} style={styles.icon} />

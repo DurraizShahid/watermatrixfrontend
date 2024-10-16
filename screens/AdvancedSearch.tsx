@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
         borderRadius: 5,
     },
     menuButtonActive: {
-        backgroundColor: '#38ADA9',
+        backgroundColor: '#1EABA5',
     },
     filterButton: {
         padding: 10,
@@ -320,7 +320,7 @@ const styles = StyleSheet.create({
         borderRadius: 5,
     },
     filterButtonActive: {
-        backgroundColor: '#38ADA9',
+        backgroundColor: '#1EABA5',
     },
     filterText: {
         color: 'white',
@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
         borderRadius: 5,
     },
     searchButton: {
-        backgroundColor: '#38ADA9',
+        backgroundColor: '#1EABA5',
         padding: 20,
         borderRadius: 5,
         alignItems: 'center',

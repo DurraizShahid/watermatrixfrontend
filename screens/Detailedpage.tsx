@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
         color: '#d1d1d1',
     },
     contactButton: {
-        backgroundColor: '#38ADA9',
+        backgroundColor: '#1EABA5',
         paddingVertical: 8,
         paddingHorizontal: 15,
         borderRadius: 20,
@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
     },
     costContainer: {
         padding: 15,
-        backgroundColor: '#38ADA9',
+        backgroundColor: '#1EABA5',
         borderRadius: 10,
         marginBottom: 20,
     },

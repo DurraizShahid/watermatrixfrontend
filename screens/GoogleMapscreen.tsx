@@ -58,7 +58,9 @@ const GoogleMapscreen: React.FC = () => {
                             longitude,
                             type: property.type,
                             status: property.status,
-                            IsPaid: parseFloat(property.price) > 0,
+                            IsPaid: property.IsPaid,
+                            city:property.city,
+                            address:property.address,
                         };
                     });        
                 setMarkers(formattedMarkers);     
@@ -109,7 +111,10 @@ const GoogleMapscreen: React.FC = () => {
             const typeFilterMatch = activeFilters.includes(marker.type) || activeFilters.includes("All");
             const statusFilterMatch = activeStatuses.includes(marker.status) || activeStatuses.includes("All");
             const paymentFilterMatch = (isPaidChecked && marker.IsPaid) || (isUnpaidChecked && !marker.IsPaid) || (!isPaidChecked && !isUnpaidChecked);
-            const searchFilterMatch = filter ? marker.price.toString().includes(filter) : true;
+            const searchFilterMatch = filter
+            ? (marker.title?.toLowerCase() || '').includes(filter.toLowerCase()) || 
+            (marker.address?.toLowerCase() || '').includes(filter.toLowerCase())
+          : true;
             return typeFilterMatch && statusFilterMatch && paymentFilterMatch && searchFilterMatch;
         });
     };
@@ -306,7 +311,7 @@ const GoogleMapscreen: React.FC = () => {
                     {filterOptions.map((filterName, index) => (
                         <TouchableOpacity
                             key={index}
-                            style={[styles.filterButton, activeFilters.includes(filterName) && { backgroundColor: '#38ADA9' }]}
+                            style={[styles.filterButton, activeFilters.includes(filterName) && { backgroundColor: '#1EABA5' }]}
                             onPress={() => toggleFilter(filterName)}
                         >
                             <Text style={[styles.filterText, activeFilters.includes(filterName) && { color: 'white' }]}>{filterName}</Text>
@@ -319,7 +324,7 @@ const GoogleMapscreen: React.FC = () => {
                         <CheckBox
                             value={isPaidChecked}
                             onValueChange={() => setIsPaidChecked(!isPaidChecked)}
-                            tintColors={{ true: '#38ADA9', false: 'gray' }}
+                            tintColors={{ true: '#1EABA5', false: 'gray' }}
                         />
                         <Text style={styles.checkboxLabel}>Show Paid</Text>
                     </View>
@@ -327,7 +332,7 @@ const GoogleMapscreen: React.FC = () => {
                         <CheckBox
                             value={isUnpaidChecked}
                             onValueChange={() => setIsUnpaidChecked(!isUnpaidChecked)}
-                            tintColors={{ true: '#38ADA9', false: 'gray' }}
+                            tintColors={{ true: '#1EABA5', false: 'gray' }}
                         />
                         <Text style={styles.checkboxLabel}>Show Unpaid</Text>
                     </View>
@@ -426,7 +431,11 @@ const styles = StyleSheet.create({
     },
     filterContainer: {
         padding: 15,
-        backgroundColor: '#1F1F1F',
+        backgroundColor: 'transparent',
+        position: 'absolute',
+        top: 0,
+        width: '100%',
+        zIndex: 1000,
     },
     searchBar: {
         flexDirection: 'row',
@@ -435,6 +444,13 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         paddingHorizontal: 10,
         marginBottom: 10,
+        borderWidth: 2,
+        borderColor: 'teal',
+        shadowColor: 'teal',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.9,
+        shadowRadius: 15,
+        elevation: 10,
     },
     searchInput: {
         flex: 1,
@@ -453,21 +469,31 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
         paddingHorizontal: 15,
         marginRight: 15,
+        borderWidth: 2,
+        borderColor: 'teal',
+        shadowColor: 'teal',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.9,
+        shadowRadius: 15,
+        elevation: 10,
     },
     filterText: {
         color: '#6C768A',
     },
     checkboxContainer: {
         flexDirection: 'row',
-        marginVertical:15,
-        borderRadius: 15,
+        marginVertical:10,
+        borderRadius: 5,
+        backgroundColor: '#19191C',
+        marginRight: 100,
     },
     checkbox: {
         flexDirection: 'row',
         alignItems: 'center',
         marginRight: 20,
         borderRadius: 15,
-        borderColor: '#6C768A',
+        borderColor: 'teal',
+        elevation: 10,
     },
     checkboxLabel: {
         color: '#6C768A',
@@ -478,16 +504,18 @@ const styles = StyleSheet.create({
     },
     resetButton: {
         position: 'absolute',
-        top: 15,
-        right: 15,
+        top: 220,
+        left: '50%',
+        transform: [{ translateX: -50 }],
         backgroundColor: 'orange',
-        borderRadius: 5,
+        borderRadius: 20,
         padding: 10,
         zIndex: 1000,
       },
       resetButtonText: {
         color: 'white',
         fontWeight: 'bold',
+        fontSize: 12,
       },
     marker: {
         flexDirection: 'row', 

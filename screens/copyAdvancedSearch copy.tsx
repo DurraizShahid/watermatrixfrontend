@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
         borderRadius: 5,
     },
     menuButtonActive: {
-        backgroundColor: '#38ADA9',
+        backgroundColor: '#1EABA5',
     },
     menuIcon: {
         marginRight: 5,
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
     },
     targetButton: {
         padding: 10,
-        backgroundColor: '#38ADA9',
+        backgroundColor: '#1EABA5',
         borderRadius: 5,
     },
     dropdownContainer: {
@@ -336,7 +336,7 @@ const styles = StyleSheet.create({
         color: '#6C768A',
     },
     filterButtonActive: {
-        backgroundColor: '#38ADA9',
+        backgroundColor: '#1EABA5',
     },
     filterTextActive: {
         color: 'white',
@@ -357,8 +357,8 @@ const styles = StyleSheet.create({
         marginRight: 10,
     },
     checkboxChecked: {
-        backgroundColor: '#38ADA9',
-        borderColor: '#38ADA9',
+        backgroundColor: '#1EABA5',
+        borderColor: '#1EABA5',
     },
     checkboxText: {
         color: '#6C768A',
@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
         marginRight: 15,
     },
     checkboxTextChecked: {
-        color: '#38ADA9',
+        color: '#1EABA5',
     },
     bottomScrollContent: {
         flexDirection: 'row',
@@ -410,7 +410,7 @@ const styles = StyleSheet.create({
         bottom: 20,
         left: 20,
         right: 20,
-        backgroundColor: '#38ADA9',
+        backgroundColor: '#1EABA5',
         padding: 15,
         borderRadius: 5,
         alignItems: 'center',
