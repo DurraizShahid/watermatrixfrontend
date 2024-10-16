@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, ScrollView } from 'react-native';
 import { WebView } from 'react-native-webview';
 import Icon from 'react-native-vector-icons/FontAwesome';
@@ -28,51 +28,57 @@ const GoogleMapscreen: React.FC = () => {
     const [isUnpaidChecked, setIsUnpaidChecked] = useState<boolean>(false);
     const [markers, setMarkers] = useState([]);
     const [polygons, setPolygons] = useState([]);
+    const [mapType, setMapType] = useState<'standard' | 'satellite'>('standard');
     const navigation = useNavigation<NavigationProp<RootStackParamList>>();
     const webViewRef = useRef<WebView | null>(null);
     const [filtersChanged, setFiltersChanged] = useState(false);
 
     const filterOptions = ["All", "Commercial", "Residential"];
-    const statusOptions = ["None", "InProgress", "Dis-Conn", "Conflict", "New", "Notice"];
-    const [mapType, setMapType] = useState<'roadmap' | 'satellite' | 'hybrid' | 'terrain'>('roadmap');
-
-    const fetchProperties = useCallback(async () => {
-        try {
-            const response = await axios.get(API_BASE_URL);
-            const properties = response.data;
-    
-            const formattedMarkers = properties
-                .filter(property => property.geometry && property.geometry.x !== null && property.geometry.y !== null)
-                .map(property => ({
-                    id: property.PropertyId,
-                    title: property.title,
-                    description: property.description,
-                    price: parseFloat(property.price),
-                    latitude: property.geometry.y,
-                    longitude: property.geometry.x,
-                    type: property.type,
-                    status: property.status,
-                    IsPaid: property.IsPaid,
-                    city: property.city,
-                    address: property.address,
-                }));        
-            setMarkers(formattedMarkers);     
-            if (formattedMarkers.length > 0) {
-                setLocation({ latitude: formattedMarkers[0].latitude, longitude: formattedMarkers[0].longitude });
-            }
-        } catch (error) {
-            console.error('Error fetching properties:', error);
-            Alert.alert('Error', 'Could not fetch properties.');
-        }
-    }, []);
+    const statusOptions = ["None","InProgress", "Dis-Conn", "Conflict", "New", "Notice"];
 
     useEffect(() => {
-        fetchProperties();
+        const fetchProperties = async () => {
+            try {
+                const response = await axios.get(API_BASE_URL);
+                const properties = response.data;
+
+                // Filter out properties where geometry is completely null
+                const formattedMarkers = properties
+                    .filter(property => property.geometry !== null) // Only exclude properties with null geometry
+                    .map(property => {
+                        const longitude = property.geometry?.x || 0;  // Use 0 if geometry is missing or invalid
+                        const latitude = property.geometry?.y || 0;
+                        const nullGeometryCount = properties.filter(property => property.geometry === null).length;
+                        console.log(`Number of properties filtered out due to null geometry: ${nullGeometryCount}`);
+
+                        return {
+                            id: property.PropertyId,
+                            title: property.title,
+                            description: property.description,
+                            price: parseFloat(property.price),
+                            latitude,
+                            longitude,
+                            type: property.type,
+                            status: property.status,
+                            IsPaid: property.IsPaid,
+                            city: property.city,
+                            address: property.address,
+                        };
+                    });
+    
+                console.log('Formatted Markers:', formattedMarkers);
+                    setMarkers(formattedMarkers);
+            } catch (error) {
+                console.error('Error fetching properties:', error);
+                Alert.alert('Error', 'Could not fetch properties.');
+            }
+        };
+    
         const fetchPolygons = async () => {
             try {
                 const response = await axios.get(PLOTS_API_URL);
                 const plots = response.data;
-
+    
                 const formattedPolygons = plots
                     .filter(plot => plot.WKT && plot.WKT.length > 0)
                     .map(plot => {
@@ -83,21 +89,19 @@ const GoogleMapscreen: React.FC = () => {
                             title: plot.landuse_su || 'Polygon',
                         };
                     });
-
+    
                 setPolygons(formattedPolygons);
             } catch (error) {
                 console.error('Error fetching polygons:', error);
                 Alert.alert('Error', 'Could not fetch polygons.');
             }
         };
+    
+        // Call both data-fetching functions
+        fetchProperties();
         fetchPolygons();
-
-        // Set up an interval to fetch properties every 60 seconds
-        const intervalId = setInterval(fetchProperties, 60000);
-
-        // Clean up the interval when the component unmounts
-        return () => clearInterval(intervalId);
-    }, [fetchProperties]);
+    }, []);
+    
 
     useEffect(() => {
         if (webViewRef.current) {
@@ -108,12 +112,13 @@ const GoogleMapscreen: React.FC = () => {
     const filteredMarkers = () => {
         return markers.filter(marker => {
             const typeFilterMatch = activeFilters.includes(marker.type) || activeFilters.includes("All");
-            const statusFilterMatch = (activeStatuses.includes("None") && marker.status === null) || activeStatuses.includes(marker.status) || activeStatuses.includes("All");
+            (activeStatuses.includes("None") && marker.status === null)
+            const statusFilterMatch = activeStatuses.includes(marker.status) || activeStatuses.includes("All");
             const paymentFilterMatch = (isPaidChecked && marker.IsPaid) || (isUnpaidChecked && !marker.IsPaid) || (!isPaidChecked && !isUnpaidChecked);
             const searchFilterMatch = filter
-                ? (marker.title?.toLowerCase() || '').includes(filter.toLowerCase()) || 
-                  (marker.address?.toLowerCase() || '').includes(filter.toLowerCase())
-                : true;
+            ? (marker.title?.toLowerCase() || '').includes(filter.toLowerCase()) || 
+            (marker.address?.toLowerCase() || '').includes(filter.toLowerCase())
+          : true;
             return typeFilterMatch && statusFilterMatch && paymentFilterMatch && searchFilterMatch;
         });
     };
@@ -160,23 +165,6 @@ const GoogleMapscreen: React.FC = () => {
         });
     };
 
-    const toggleMapType = () => {
-        setMapType(prevType => {
-            switch (prevType) {
-                case 'roadmap':
-                    return 'satellite';
-                case 'satellite':
-                    return 'hybrid';
-                case 'hybrid':
-                    return 'terrain';
-                case 'terrain':
-                    return 'roadmap';
-                default:
-                    return 'roadmap';
-            }
-        });
-    };
-
     const renderMap = () => {
         return `
         <!DOCTYPE html>
@@ -208,13 +196,11 @@ const GoogleMapscreen: React.FC = () => {
     
                     // Use Google Maps tile layer
                     var googleMapType = '${mapType}';
-                    var googleMapsLayer = L.tileLayer('https://maps.googleapis.com/maps/vt?pb=!1m5!1m4!1i{z}!2i{x}!3i{y}!4i256!2m3!1e0!2sm!3i{y}!3m9!2sen-US!3sUS!5e18!12m1!1e68!12m3!1e37!2m1!1ssmartmaps!4e0!23i1301875&key=AIzaSyA49ZSrNSSd35nTc1idC6cIk55_TEj0jlAlyrs=${mapType}', {
+                    var googleMapsLayer = L.tileLayer('https://maps.googleapis.com/maps/vt?pb=!1m5!1m4!1i{z}!2i{x}!3i{y}!4i256!2m3!1e0!2sm!3i{y}!3m9!2sen-US!3sUS!5e18!12m1!1e68!12m3!1e37!2m1!1ssmartmaps!4e0!23i1301875&key=AIzaSyA49ZSrNSSd35nTc1idC6cIk55_TEj0jlA', {
                         maxZoom: 20,
                         subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
                         attribution: 'Map data &copy; <a href="https://www.google.com/maps">Google</a>'
                     }).addTo(map);
-
-                        
     
                     function addMarkers(markers) {
                         markers.forEach(function(marker) {
@@ -371,7 +357,7 @@ const GoogleMapscreen: React.FC = () => {
                 }}
             />
 
-            <TouchableOpacity style={styles.currentLocationButton} onPress={toggleMapType}>
+            <TouchableOpacity style={styles.currentLocationButton} onPress={() => webViewRef.current?.injectJavaScript(`moveToLocation(${location.latitude}, ${location.longitude});`)}>
                 <Icon name="crosshairs" size={20} color="white" />
             </TouchableOpacity>
 
