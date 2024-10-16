@@ -28,13 +28,14 @@ const GoogleMapscreen: React.FC = () => {
     const [isUnpaidChecked, setIsUnpaidChecked] = useState<boolean>(false);
     const [markers, setMarkers] = useState([]);
     const [polygons, setPolygons] = useState([]);
-    const [mapType, setMapType] = useState<'standard' | 'satellite'>('standard');
     const navigation = useNavigation<NavigationProp<RootStackParamList>>();
     const webViewRef = useRef<WebView | null>(null);
     const [filtersChanged, setFiltersChanged] = useState(false);
 
     const filterOptions = ["All", "Commercial", "Residential"];
-    const statusOptions = ["InProgress", "Dis-Conn", "Conflict", "New", "Notice"];
+    const statusOptions = ["None", "InProgress", "Dis-Conn", "Conflict", "New", "Notice"];
+    const [mapType, setMapType] = useState<'roadmap' | 'satellite' | 'hybrid' | 'terrain'>('roadmap');
+
 
     useEffect(() => {
         const fetchProperties = async () => {
@@ -109,6 +110,7 @@ const GoogleMapscreen: React.FC = () => {
     const filteredMarkers = () => {
         return markers.filter(marker => {
             const typeFilterMatch = activeFilters.includes(marker.type) || activeFilters.includes("All");
+            (activeStatuses.includes("None") && marker.status === null)
             const statusFilterMatch = activeStatuses.includes(marker.status) || activeStatuses.includes("All");
             const paymentFilterMatch = (isPaidChecked && marker.IsPaid) || (isUnpaidChecked && !marker.IsPaid) || (!isPaidChecked && !isUnpaidChecked);
             const searchFilterMatch = filter
@@ -161,6 +163,23 @@ const GoogleMapscreen: React.FC = () => {
         });
     };
 
+    const toggleMapType = () => {
+        setMapType(prevType => {
+            switch (prevType) {
+                case 'roadmap':
+                    return 'satellite';
+                case 'satellite':
+                    return 'hybrid';
+                case 'hybrid':
+                    return 'terrain';
+                case 'terrain':
+                    return 'roadmap';
+                default:
+                    return 'roadmap';
+            }
+        });
+    };
+
     const renderMap = () => {
         return `
         <!DOCTYPE html>
@@ -192,11 +211,13 @@ const GoogleMapscreen: React.FC = () => {
     
                     // Use Google Maps tile layer
                     var googleMapType = '${mapType}';
-                    var googleMapsLayer = L.tileLayer('https://maps.googleapis.com/maps/vt?pb=!1m5!1m4!1i{z}!2i{x}!3i{y}!4i256!2m3!1e0!2sm!3i{y}!3m9!2sen-US!3sUS!5e18!12m1!1e68!12m3!1e37!2m1!1ssmartmaps!4e0!23i1301875&key=AIzaSyA49ZSrNSSd35nTc1idC6cIk55_TEj0jlA', {
+                    var googleMapsLayer = L.tileLayer('https://maps.googleapis.com/maps/vt?pb=!1m5!1m4!1i{z}!2i{x}!3i{y}!4i256!2m3!1e0!2sm!3i{y}!3m9!2sen-US!3sUS!5e18!12m1!1e68!12m3!1e37!2m1!1ssmartmaps!4e0!23i1301875&key=AIzaSyA49ZSrNSSd35nTc1idC6cIk55_TEj0jlAlyrs=${mapType}', {
                         maxZoom: 20,
                         subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
                         attribution: 'Map data &copy; <a href="https://www.google.com/maps">Google</a>'
                     }).addTo(map);
+
+                        
     
                     function addMarkers(markers) {
                         markers.forEach(function(marker) {
@@ -353,7 +374,7 @@ const GoogleMapscreen: React.FC = () => {
                 }}
             />
 
-            <TouchableOpacity style={styles.currentLocationButton} onPress={() => webViewRef.current?.injectJavaScript(`moveToLocation(${location.latitude}, ${location.longitude});`)}>
+            <TouchableOpacity style={styles.currentLocationButton} onPress={toggleMapType}>
                 <Icon name="crosshairs" size={20} color="white" />
             </TouchableOpacity>
 
@@ -397,6 +418,9 @@ const GoogleMapscreen: React.FC = () => {
                             case "Notice":
                                 buttonStyle = styles.noticeButton;
                                 break;
+                                case "None":
+                                 buttonStyle = styles.NoneButton;
+                                 break;
                             default:
                                 buttonStyle = {};
                         }
@@ -485,7 +509,8 @@ const styles = StyleSheet.create({
         marginVertical:10,
         borderRadius: 5,
         backgroundColor: '#19191C',
-        marginRight: 100,
+        marginRight: 1,
+        padding: 5,
     },
     checkbox: {
         flexDirection: 'row',
@@ -603,6 +628,9 @@ const styles = StyleSheet.create({
       },
       activeButtonText: {
         color: 'white',
+      },
+      NoneButton: {
+        color: 'red',
       },
     icon: {
         color: '#6C768A',

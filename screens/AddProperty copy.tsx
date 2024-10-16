@@ -3,7 +3,6 @@ import { View, TextInput, StyleSheet, TouchableOpacity, Text, ScrollView, Alert,
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import axios from 'axios'; // Import Axios
-import { Picker } from '@react-native-picker/picker';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import LoginScreen from './LoginScreen';
@@ -32,8 +31,6 @@ const AddProperty = () => {
   const [longitude, setLongitude] = useState('');
   const [latitude, setLatitude] = useState('');
   const navigation = useNavigation();
-
-  const statusOptions = ["None", "InProgress", "Dis-Conn", "Conflict", "New", "Notice"];
 
   const handleSave = async () => {
     console.log('UserId:', UserId);
@@ -243,23 +240,21 @@ const AddProperty = () => {
           value={price}
           onChangeText={setPrice}
         />
-        <Picker
-            selectedValue={type}
-            onValueChange={(itemValue) => setType(itemValue)}
-            style={styles.picker}
-            >
-              <Picker.Item label="Select Type" value="" />
-              <Picker.Item label="Residential Property" value="Residential" />
-              <Picker.Item label="Commercial Property" value="Commercial" />
-              </Picker>
-              <Picker
-            selectedValue={status}
-            onValueChange={(itemValue) => setStatus(itemValue)}
-            style={styles.picker}
-            >
-              <Picker.Item label="Select Status" value="" />
-              {statusOptions.map((option, index) => (<Picker.Item key={index} label={option} value={option} />))}
-              </Picker>
+        <TextInput
+          style={styles.input}
+          placeholder="Type"
+          placeholderTextColor="#666"
+         
+          value={type}
+          onChangeText={setType}
+        />
+<TextInput
+          style={styles.input}
+          placeholder="Status"
+          placeholderTextColor="#666"
+          value={status}
+          onChangeText={setStatus}
+        />
         {/* Location field */}
         <Text style={styles.sectionTitle}>Property Location</Text>
         <TouchableOpacity
@@ -462,14 +457,6 @@ const styles = StyleSheet.create({
   switchLabel: {
     color: '#fff',
     fontSize: 16,
-  },
-  picker: {
-    backgroundColor: '#3F3F45',
-    color: 'white',
-    height: 50,
-    borderRadius: 8, // Smoother corners
-    paddingHorizontal: 15,
-    marginVertical: 10, // Ensure the picker has space around it
   },
 });
 

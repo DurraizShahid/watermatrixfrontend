@@ -23,7 +23,7 @@ const AdvancedSearchScreen = () => {
     const [customLocation, setCustomLocation] = useState('');
     const [areaFilter, setAreaFilter] = useState([]);
     const [searchText, setSearchText] = useState('');
-    const [isPaidFilter, setIsPaidFilter] = useState(false);
+    const [IsPaidFilter, setIsPaidFilter] = useState(false);
     const [properties, setProperties] = useState([]);
 
     useEffect(() => {
@@ -41,9 +41,9 @@ const AdvancedSearchScreen = () => {
     }, []);
 
     const menuItems = [
-        { name: ' Search', icon: 'search' },
-        { name: ' Billing Ref. No.', icon: 'book' },
-        { name: ' Parcels', icon: 'map' }
+        { name: 'Search', icon: 'search' },
+        { name: 'Billing Ref. No.', icon: 'book' },
+        { name: 'Parcels', icon: 'map' }
     ];
 
     const filterItems = ["New", "InProgress", "DisConn", "Conflict", "Notice", "Comm"];
@@ -79,13 +79,13 @@ const AdvancedSearchScreen = () => {
                 matchesFilter = matchesFilter && item.title.toLowerCase().includes(searchText.toLowerCase());
             }
 
-            if (isPaidFilter) {
+            if (IsPaidFilter) {
                 matchesFilter = matchesFilter && item.IsPaid === true;
             }
 
             return matchesFilter;
         });
-    }, [filter, selectedCategory, selectedType, areaFilter, searchText, isPaidFilter, properties]);
+    }, [filter, selectedCategory, selectedType, areaFilter, searchText, IsPaidFilter, properties]);
 
     const resultCount = filteredResults.length;
 
@@ -156,6 +156,7 @@ const AdvancedSearchScreen = () => {
                             <Picker
                                 selectedValue={selectedCategory}
                                 style={styles.picker}
+
                                 onValueChange={setSelectedCategory}
                             >
                                 {uniqueCategories.map((category, index) => (
@@ -201,7 +202,7 @@ const AdvancedSearchScreen = () => {
                         <View style={styles.placeholderContainer}>
                             <View style={styles.checkboxContainer}>
                                 <CheckBox
-                                    value={isPaidFilter}
+                                    value={IsPaidFilter}
                                     onValueChange={setIsPaidFilter}
                                     accessibilityLabel="Show only Paid Properties"
                                 />
@@ -219,7 +220,7 @@ const AdvancedSearchScreen = () => {
                     </>
                 )}
 
-                {activeMenu === 'Ad/Phone Numbers' && (
+                {activeMenu === 'Billing Ref. No.' && (
                     <View style={styles.placeholderContainer}>
                         <Text style={styles.placeholderTitle}>Search Phone Numbers</Text>
                         <TextInput
@@ -232,7 +233,7 @@ const AdvancedSearchScreen = () => {
                     </View>
                 )}
 
-                {activeMenu === 'Parcels and Lands' && (
+                {activeMenu === 'Parcels' && (
                     <>
                         <View style={styles.placeholderContainer}>
                             <Text style={styles.placeholderTitle}>City</Text>
@@ -279,95 +280,113 @@ const AdvancedSearchScreen = () => {
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
-        backgroundColor: '#19191C',
+      flex: 1,
+      backgroundColor: '#19191C',
+      paddingHorizontal: 20, // Add padding to prevent elements from touching the sides
     },
     header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 15,
-        backgroundColor: '#23252F',
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 20,
+      paddingHorizontal: 15,
+      backgroundColor: '#23252F',
+      borderBottomWidth: 1,
+      borderBottomColor: '#333', // Optional: adds a subtle border for clarity
     },
     backButton: {
-        marginRight: 15,
+      marginRight: 15,
     },
     title: {
-        color: 'white',
-        fontSize: 20,
-        fontWeight: 'bold',
+      color: 'white',
+      fontSize: 22, // Slightly larger for better readability
+      fontWeight: 'bold',
     },
     menuContainer: {
-        marginVertical: 10,
+      marginVertical: 15, // Increase space above and below the menu
     },
     menuScroll: {
-        flexDirection: 'row',
+      flexDirection: 'row',
+      paddingVertical: 10, // Add vertical padding for a more spacious look
     },
     menuButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 10,
-        marginHorizontal: 5,
-        backgroundColor: '#23252F',
-        borderRadius: 5,
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 12, // More padding for better button size
+      paddingHorizontal: 15,
+      marginHorizontal: 10, // Increased spacing between buttons
+      backgroundColor: '#23252F',
+      borderRadius: 8, // Smoother corners
     },
     menuButtonActive: {
-        backgroundColor: '#1EABA5',
+      backgroundColor: '#1EABA5',
     },
     filterButton: {
-        padding: 10,
-        marginHorizontal: 5,
-        backgroundColor: '#6C768A',
-        borderRadius: 5,
+      paddingVertical: 12,
+      paddingHorizontal: 15,
+      marginHorizontal: 10,
+      backgroundColor: '#6C768A',
+      borderRadius: 8,
     },
     filterButtonActive: {
-        backgroundColor: '#1EABA5',
+      backgroundColor: '#1EABA5',
     },
     filterText: {
-        color: 'white',
+      color: 'white',
+      fontSize: 14, // Slightly smaller, consistent with button size
     },
     placeholderContainer: {
-        marginVertical: 10,
+      marginVertical: 15, // Increase space between sections
     },
     placeholderTitle: {
-        color: 'white',
-        fontSize: 16,
-        marginBottom: 5,
+      color: 'white',
+      fontSize: 18, // Larger title for better readability
+      marginBottom: 8, // Slightly more space below the title
     },
     customLocationInput: {
-        backgroundColor: '#23252F',
-        color: 'white',
-        padding: 10,
-        borderRadius: 5,
+      backgroundColor: '#23252F',
+      color: 'white',
+      paddingVertical: 12, // More padding for a larger input field
+      paddingHorizontal: 15,
+      borderRadius: 8,
     },
     searchButton: {
-        backgroundColor: '#1EABA5',
-        padding: 20,
-        borderRadius: 5,
-        alignItems: 'center',
-        flexDirection: 'row',
-        justifyContent: 'center',
-        top: 190,
+      backgroundColor: '#1EABA5',
+      paddingVertical: 15, // Slightly smaller padding for consistency
+      borderRadius: 8,
+      alignItems: 'center',
+      flexDirection: 'row',
+      justifyContent: 'center',
+      marginTop: 30, // Increased margin to avoid crowding
     },
     searchButtonText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: 'bold',
-        marginLeft: 10,
+      color: 'white',
+      fontSize: 16,
+      fontWeight: 'bold',
+      marginLeft: 10,
     },
     resultCount: {
-        color: 'white',
-        marginLeft: 10,
-        fontSize: 16,
-        fontWeight: 'bold',
+      color: 'white',
+      marginLeft: 10,
+      fontSize: 16,
+      fontWeight: 'bold',
     },
     checkboxContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginVertical: 10, // Ensure spacing around checkboxes
     },
     checkboxLabel: {
-        color: 'white',
-        marginLeft: 10,
+      color: 'white',
+      marginLeft: 10,
     },
-});
+    picker: {
+      backgroundColor: '#6C768A',
+      color: 'white',
+      height: 50,
+      borderRadius: 8, // Smoother corners
+      paddingHorizontal: 15,
+      marginVertical: 10, // Ensure the picker has space around it
+    },
+  });
 
 export default AdvancedSearchScreen;
