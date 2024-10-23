@@ -4,6 +4,7 @@ import { WebView } from 'react-native-webview';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import axios from 'axios';
+import darkModeStyle from './darkModeStyle';
 import CheckBox from '@react-native-community/checkbox';
 import Geocoder from 'react-native-geocoding';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
