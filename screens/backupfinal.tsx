@@ -7,7 +7,6 @@ import axios from 'axios';
 import darkModeStyle from './darkModeStyle';
 import CheckBox from '@react-native-community/checkbox';
 import Geocoder from 'react-native-geocoding';
-import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 
 Geocoder.init('AIzaSyCbuY6KKFkmb4wkMzCsOskkxd7btxHCZ-w');
 
@@ -18,6 +17,7 @@ type RootStackParamList = {
     Detailedpage: { id: number };
     AdvancedSearch: undefined;
     FavouritesScreen: undefined;
+    // ... (other screens in your navigation stack)
 };
 
 const GoogleMapscreen: React.FC = () => {
@@ -34,15 +34,8 @@ const GoogleMapscreen: React.FC = () => {
     const webViewRef = useRef<WebView | null>(null);
     const [filtersChanged, setFiltersChanged] = useState(false);
 
-    const filterOptions = ["All", "Commercial", "Residential"]
-    const statusOptions = ["None","InProgress", "Dis-Conn", "Conflict", "New", "Notice"];
-
-    const [mapPosition, setMapPosition] = useState({
-        center: { lat: 33.6, lng: 73.1 },
-        zoom: 13
-    });
-
-    const [isMapInitialized, setIsMapInitialized] = useState(false);
+    const filterOptions = ["All", "Commercial", "Residential"];
+    const statusOptions = ["InProgress", "Dis-Conn", "Conflict", "New", "Notice"];
 
     useEffect(() => {
         const fetchProperties = async () => {
@@ -50,43 +43,39 @@ const GoogleMapscreen: React.FC = () => {
                 const response = await axios.get(API_BASE_URL);
                 const properties = response.data;
 
-                // Filter out properties where geometry is completely null
-                const formattedMarkers = properties
-                    .filter(property => property.geometry !== null) // Only exclude properties with null geometry
-                    .map(property => {
-                        const longitude = property.geometry?.x || 0;  // Use 0 if geometry is missing or invalid
-                        const latitude = property.geometry?.y || 0;
-                        const nullGeometryCount = properties.filter(property => property.geometry === null).length;
-                        console.log(`Number of properties filtered out due to null geometry: ${nullGeometryCount}`);
+                const formattedMarkers = properties.map(property => {
+                    const longitude = property.geometry.x; 
+                    const latitude = property.geometry.y; 
 
-                        return {
-                            id: property.PropertyId,
-                            title: property.title,
-                            description: property.description,
-                            price: parseFloat(property.price),
-                            latitude,
-                            longitude,
-                            type: property.type,
-                            status: property.status,
-                            IsPaid: property.IsPaid,
-                            city: property.city,
-                            address: property.address,
-                        };
-                    });
-    
-                console.log('Formatted Markers:', formattedMarkers);
-                    setMarkers(formattedMarkers);
+                    return {
+                        id: property.PropertyId,
+                        title: property.title,
+                        description: property.description,
+                        price: parseFloat(property.price),
+                        latitude,
+                        longitude,
+                        type: property.type,
+                        status: property.status,
+                        IsPaid: parseFloat(property.price) > 0,
+                    };
+                });
+
+                setMarkers(formattedMarkers);
+
+                if (formattedMarkers.length > 0) {
+                    setLocation({ latitude: formattedMarkers[0].latitude, longitude: formattedMarkers[0].longitude });
+                }
             } catch (error) {
                 console.error('Error fetching properties:', error);
                 Alert.alert('Error', 'Could not fetch properties.');
             }
         };
-    
+
         const fetchPolygons = async () => {
             try {
                 const response = await axios.get(PLOTS_API_URL);
                 const plots = response.data;
-    
+
                 const formattedPolygons = plots
                     .filter(plot => plot.WKT && plot.WKT.length > 0)
                     .map(plot => {
@@ -97,44 +86,30 @@ const GoogleMapscreen: React.FC = () => {
                             title: plot.landuse_su || 'Polygon',
                         };
                     });
-    
+
                 setPolygons(formattedPolygons);
             } catch (error) {
                 console.error('Error fetching polygons:', error);
                 Alert.alert('Error', 'Could not fetch polygons.');
             }
         };
-    
-        // Call both data-fetching functions
+
         fetchProperties();
         fetchPolygons();
     }, []);
-    
 
     useEffect(() => {
         if (webViewRef.current) {
-            const filteredData = filteredMarkers();
-            webViewRef.current.injectJavaScript(`
-                updateMap(
-                    ${JSON.stringify(filteredData)},
-                    ${JSON.stringify(polygons)},
-                    ${JSON.stringify(mapPosition)}
-                );
-                true;
-            `);
+            webViewRef.current.injectJavaScript(`updateMap(${JSON.stringify(filteredMarkers())}, ${JSON.stringify(polygons)});`);
         }
     }, [activeFilters, activeStatuses, isPaidChecked, isUnpaidChecked, filter]);
 
     const filteredMarkers = () => {
         return markers.filter(marker => {
             const typeFilterMatch = activeFilters.includes(marker.type) || activeFilters.includes("All");
-            (activeStatuses.includes("None") && marker.status === null)
             const statusFilterMatch = activeStatuses.includes(marker.status) || activeStatuses.includes("All");
             const paymentFilterMatch = (isPaidChecked && marker.IsPaid) || (isUnpaidChecked && !marker.IsPaid) || (!isPaidChecked && !isUnpaidChecked);
-            const searchFilterMatch = filter
-            ? (marker.title?.toLowerCase() || '').includes(filter.toLowerCase()) || 
-            (marker.address?.toLowerCase() || '').includes(filter.toLowerCase())
-          : true;
+            const searchFilterMatch = filter ? marker.price.toString().includes(filter) : true;
             return typeFilterMatch && statusFilterMatch && paymentFilterMatch && searchFilterMatch;
         });
     };
@@ -148,47 +123,48 @@ const GoogleMapscreen: React.FC = () => {
         setFiltersChanged(false);
     };
 
-    const handleLocationSearch = (data, details) => {
-        const { lat, lng } = details.geometry.location;
-        setLocation({ latitude: lat, longitude: lng });
+    const handleLocationSearch = async (locationName: string) => {
+        try {
+            const response = await Geocoder.from(locationName);
+            const { lat, lng } = response.results[0].geometry.location;
 
-        if (webViewRef.current) {
-            webViewRef.current.injectJavaScript(
-                `moveToLocation(${lat}, ${lng});`
-            );
+            setLocation({ latitude: lat, longitude: lng });
+
+            if (webViewRef.current) {
+                webViewRef.current.injectJavaScript(
+                    `moveToLocation(${lat}, ${lng});`
+                );
+            }
+        } catch (error) {
+            console.error('Error finding location:', error);
+            Alert.alert('Error', 'Could not find location.');
         }
     };
 
     const toggleFilter = (filterName: string) => {
         setActiveFilters([filterName]);
         setFiltersChanged(true);
-    };const toggleStatus = (statusName: string) => {
-    if (statusName === "None") {
-        setActiveStatuses(["None"]); // Clear all statuses and set only "None"
-    } else {
+    };
+      
+    const toggleStatus = (statusName: string) => {
         setActiveStatuses(prevStatuses => {
-            // If "None" is currently selected, remove it from the statuses
-            const newStatuses = prevStatuses.includes("None") 
-                ? [statusName]
-                : prevStatuses.includes(statusName)
-                    ? prevStatuses.filter(s => s !== statusName)
-                    : [...prevStatuses, statusName];
-
+            const newStatuses = prevStatuses.includes(statusName)
+                ? prevStatuses.filter(s => s !== statusName)
+                : [...prevStatuses, statusName];
+            setFiltersChanged(true);
             return newStatuses;
         });
-    }
-    setFiltersChanged(true);
-};
+    };
 
-const renderMap = () => {
-    return `
-    <!DOCTYPE html>
-    <html>
-        <head>
-            <title>Leaflet Map</title>
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-            <style>
+    const renderMap = () => {
+        return `
+        <!DOCTYPE html>
+        <html>
+            <head>
+                <title>Leaflet Map</title>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+                <style>
                 html, body {
                     margin: 0;
                     padding: 0;
@@ -201,188 +177,127 @@ const renderMap = () => {
                     margin: 0;
                     padding: 0;
                 }
-            </style>
-        </head>
-        <body>
-            <div id="map"></div>
-            <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-            <script>
-                let map;
-                let currentMarkers = [];
-                let currentPolygons = [];
-
-                function initializeMap() {
-                    if (!map) {
-                        map = L.map('map').setView([${mapPosition.center.lat}, ${mapPosition.center.lng}], ${mapPosition.zoom});
-                        
-                        L.tileLayer('https://maps.googleapis.com/maps/vt?pb=!1m5!1m4!1i{z}!2i{x}!3i{y}!4i256!2m3!1e0!2sm!3i{y}!3m9!2sen-US!3sUS!5e18!12m1!1e68!12m3!1e37!2m1!1ssmartmaps!4e0!23i1301875&key=AIzaSyA49ZSrNSSd35nTc1idC6cIk55_TEj0jlA', {
-                            maxZoom: 20,
-                            subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
-                            attribution: 'Map data &copy; <a href="https://www.google.com/maps">Google</a>'
-                        }).addTo(map);
-
-                        map.on('moveend', function() {
-                            window.ReactNativeWebView.postMessage(JSON.stringify({
-                                type: 'positionChanged',
-                                position: {
-                                    center: {
-                                        lat: map.getCenter().lat,
-                                        lng: map.getCenter().lng
-                                    },
-                                    zoom: map.getZoom()
+                </style>
+            </head>
+            <body>
+                <div id="map"></div>
+                <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+                <script>
+                    var map = L.map('map').setView([${location.latitude}, ${location.longitude}], 13);
+    
+                    L.tileLayer('https://maps.googleapis.com/maps/vt?pb=!1m5!1m4!1i{z}!2i{x}!3i{y}!4i256!2m3!1e0!2sm!3i{y}!3m9!2sen-US!3sUS!5e18!12m1!1e68!12m3!1e37!2m1!1ssmartmaps!4e0!23i1301875&key=AIzaSyA49ZSrNSSd35nTc1idC6cIk55_TEj0jlA', {
+                        maxZoom: 19,
+                    }).addTo(map);
+    
+                    function addMarkers(markers) {
+                        markers.forEach(function(marker) {
+                            var markerColor;
+                            
+                            if (marker.status === null) {
+                                markerColor = marker.IsPaid ? '#4CAF50' : '#FF0000'; // Green if paid, Red if unpaid
+                            } else {
+                                switch (marker.status) {
+                                    case "InProgress":
+                                        markerColor = '#E97451';
+                                        break;
+                                    case "Notice":
+                                        markerColor = '#E6AF2E'; // Yellow
+                                        break;
+                                    case "New":
+                                        markerColor = '#457B9D'; // Blue
+                                        break;
+                                    case "Dis-Conn":
+                                        markerColor = '#967bb6'; // Lavender
+                                        break;
+                                    case "Conflict":
+                                        markerColor = '#F1AB86'; // Light Pink
+                                        break;
+                                    default:
+                                        markerColor = '#FF5252'; // Default red color
                                 }
-                            }));
-                        });
-                    }
-                }
-
-                function clearLayers() {
-                    currentMarkers.forEach(marker => marker.remove());
-                    currentPolygons.forEach(polygon => polygon.remove());
-                    currentMarkers = [];
-                    currentPolygons = [];
-                }
-
-                function addMarkers(markers) {
-                    markers.forEach(function(marker) {
-                        var markerColor;
-
-                        if (marker.status === null) {
-                            markerColor = marker.IsPaid ? '#4CAF50' : '#FF0000';
-                        } else {
-                            switch (marker.status) {
-                                case "InProgress": markerColor = '#E97451'; break;
-                                case "Notice": markerColor = '#E6AF2E'; break;
-                                case "New": markerColor = '#457B9D'; break;
-                                case "Dis-Conn": markerColor = '#967bb6'; break;
-                                case "Conflict": markerColor = '#F1AB86'; break;
-                                default: markerColor = '#FF5252';
                             }
-                        }
-
-                        var markerHtml = 
-                            '<div style="position: relative;">' +
-                                '<div style="background-color: ' + markerColor + '; padding: 5px 8px; border-radius: 5px; display: flex; align-items: center; width: auto; min-width: 70px; justify-content: space-between;">' +
-                                    '<span style="color: white; font-weight: bold; margin-right: 3px;">' + marker.price + '</span>' +
-                                    '<img src="' + (marker.type === 'Residential' ? 'https://www.svgrepo.com/show/22031/home-icon-silhouette.svg' : 'https://www.svgrepo.com/show/535238/building.svg') + '"' +
-                                        'style="width: 18px; height: 18px; filter: invert(1);" />' +
-                                '</div>' +
-                                '<div style="position: absolute; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-top: 8px solid ' + markerColor + ';"></div>' +
-                            '</div>';
-                
-                        var icon = L.divIcon({
-                            html: markerHtml,
-                            className: 'custom-div-icon',
-                            iconSize: [90, 40],
-                            iconAnchor: [45, 40]
-                        });
-
-                        const newMarker = L.marker([marker.latitude, marker.longitude], { icon: icon })
-                            .addTo(map)
-                            .on('click', function() {
-                                window.ReactNativeWebView.postMessage(JSON.stringify({
-                                    type: 'markerClicked',
-                                    id: marker.id
-                                }));
+                    
+                            var markerHtml = 
+                                '<div style="position: relative;">' +
+                                    '<div style="background-color: ' + markerColor + '; padding: 5px 8px; border-radius: 5px; display: flex; align-items: center; width: auto; min-width: 70px; justify-content: space-between;">' +
+                                        '<span style="color: white; font-weight: bold; margin-right: 3px;">' + marker.price + '</span>' +
+                                        '<img src="' + (marker.type === 'Residential' ? 'https://www.svgrepo.com/show/22031/home-icon-silhouette.svg' : 'https://www.svgrepo.com/show/535238/building.svg') + '"' +
+                                             'style="width: 18px; height: 18px; filter: invert(1);" />' +
+                                    '</div>' +
+                                    '<div style="position: absolute; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-top: 8px solid ' + markerColor + ';"></div>' +
+                                '</div>';
+                    
+                            var icon = L.divIcon({
+                                html: markerHtml,
+                                className: 'custom-div-icon',
+                                iconSize: [90, 40],
+                                iconAnchor: [45, 40]
                             });
-                        currentMarkers.push(newMarker);
-                    });
-                }
-
-                function addPolygons(polygons) {
-                    polygons.forEach(function(polygon) {
-                        const newPolygon = L.polygon(polygon.coordinates, { color: 'blue' })
-                            .addTo(map);
-                        currentPolygons.push(newPolygon);
-                    });
-                }
-
-                function updateMap(markers, polygons, position) {
-                    if (!map) {
-                        initializeMap();
-                        return;
+                    
+                            L.marker([marker.latitude, marker.longitude], { icon: icon })
+                                .addTo(map)
+                                .on('click', function() {
+                                    window.ReactNativeWebView.postMessage(JSON.stringify({
+                                        type: 'markerClicked',
+                                        id: marker.id
+                                    }));
+                                });
+                        });
                     }
-
-                    // Store current view state if no position provided
-                    const currentPosition = position || {
-                        center: {
-                            lat: map.getCenter().lat,
-                            lng: map.getCenter().lng
-                        },
-                        zoom: map.getZoom()
-                    };
-
-                    // Clear and update layers
-                    clearLayers();
-                    addMarkers(markers);
-                    addPolygons(polygons);
-
-                    // Restore position
-                    map.setView(
-                        [currentPosition.center.lat, currentPosition.center.lng],
-                        currentPosition.zoom,
-                        { animate: false }
-                    );
-                }
-
-                // Initialize map and add initial data
-                initializeMap();
-                updateMap(
-                    ${JSON.stringify(filteredMarkers())},
-                    ${JSON.stringify(polygons)},
-                    ${JSON.stringify(mapPosition)}
-                );
-            </script>
-        </body>
-    </html>
-    `;
-};
-
+    
+                    function addPolygons(polygons) {
+                        polygons.forEach(function(polygon) {
+                            L.polygon(polygon.coordinates, { color: 'blue' })
+                                .addTo(map)
+                                .bindPopup(polygon.title);
+                        });
+                    }
+    
+                    function moveToLocation(lat, lng) {
+                        map.setView([lat, lng], 13);
+                    }
+    
+                    function updateMap(markers, polygons) {
+                        map.eachLayer(function (layer) {
+                            if (layer instanceof L.Marker || layer instanceof L.Polygon) {
+                                map.removeLayer(layer);
+                            }
+                        });
+                        addMarkers(markers);
+                        addPolygons(polygons);
+                    }
+    
+                    window.addEventListener('message', function(event) {
+                        var data = JSON.parse(event.data);
+                        if (data.markers) {
+                            addMarkers(data.markers);
+                        }
+                        if (data.polygons) {
+                            addPolygons(data.polygons);
+                        }
+                    });
+    
+                    addMarkers(${JSON.stringify(filteredMarkers())});
+                    addPolygons(${JSON.stringify(polygons)});
+                </script>
+            </body>
+        </html>
+        `;
+    };
 
     return (
         <View style={styles.container}>
             <View style={styles.filterContainer}>
-                <GooglePlacesAutocomplete
-                    placeholder="Find Location via Google"
-                    fetchDetails={true}
-                    onPress={handleLocationSearch}
-                    query={{
-                        key: 'AIzaSyCbuY6KKFkmb4wkMzCsOskkxd7btxHCZ-w',
-                        language: 'en',
-                    }}
-                    styles={{
-                        listView: {
-                            backgroundColor: '#23252F',
-                        },
-                        textInputContainer: {
-                            backgroundColor: '#19191C',
-                            borderTopWidth: 0,
-                            borderBottomWidth: 0,
-                            borderRadius: 5,
-                        },
-                        textInput: {
-                            height: 50,
-                            color: '#FFFFFF',
-                            paddingHorizontal: 10,
-                            backgroundColor: '#19191C',
-                        },
-                        row: {
-                            backgroundColor: '#19191C',
-                            padding: 20,
-                        },
-                        text: {
-                            color: '#FFFFFF',
-                        },
-                        poweredContainer: {
-                            backgroundColor: '#19191C',
-                        },
-                        powered: {
-                            color: 'white',
-                        },
-                    }}
-                />
-
-                <Icon name="search" size={20} color="gray" style={styles.searchIcon} />
+                <View style={styles.searchBar}>
+                    <TextInput
+                        style={styles.searchInput}
+                        placeholder="Enter location"
+                        placeholderTextColor="gray"
+                        onSubmitEditing={(event) => handleLocationSearch(event.nativeEvent.text)}
+                        onChangeText={text => setFilter(text)}
+                    />
+                    <Icon name="search" size={20} color="gray" style={styles.searchIcon} />
+                </View>
 
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
                     {filterOptions.map((filterName, index) => (
@@ -421,12 +336,11 @@ const renderMap = () => {
                 originWhitelist={['*']}
                 source={{ html: renderMap() }}
                 javaScriptEnabled
+                injectedJavaScript={`window.ReactNativeWebView.postMessage(JSON.stringify({ markers: ${JSON.stringify(filteredMarkers())}, polygons: ${JSON.stringify(polygons)} }));`}
                 onMessage={(event) => {
                     const data = JSON.parse(event.nativeEvent.data);
                     if (data.type === 'markerClicked') {
                         navigation.navigate('Detailedpage', { id: data.id });
-                    } else if (data.type === 'positionChanged') {
-                        setMapPosition(data.position);
                     }
                 }}
             />
@@ -435,7 +349,7 @@ const renderMap = () => {
                 <Icon name="crosshairs" size={20} color="white" />
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.toggleMapTypeButton} onPress={() => setMapType(prevType => { const nextType = prevType === 'roadmap' ? 'satellite' : prevType === 'satellite' ? 'terrain' : prevType === 'terrain' ? 'hybrid' : 'roadmap'; webViewRef.current?.injectJavaScript(`updateMap(${JSON.stringify(filteredMarkers())}, ${JSON.stringify(polygons)});`); return nextType; })}>
+            <TouchableOpacity style={styles.toggleMapTypeButton} onPress={() => setMapType(prevType => (prevType === 'standard' ? 'satellite' : 'standard'))}>
                 <Icon name="globe" size={20} color="white" />
             </TouchableOpacity>
 
@@ -444,7 +358,7 @@ const renderMap = () => {
                 <Text style={styles.listButtonText}>List</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.favouritesButton} onPress={() => navigation.navigate('Favourites')}>
+            <TouchableOpacity style={styles.favouritesButton} onPress={() => navigation.navigate('FavouritesScreen')}>
                 <Icon name="heart-o" size={20} color="white" />
             </TouchableOpacity>
 
@@ -475,9 +389,6 @@ const renderMap = () => {
                             case "Notice":
                                 buttonStyle = styles.noticeButton;
                                 break;
-                                case "None":
-                                 buttonStyle = styles.NoneButton;
-                                 break;
                             default:
                                 buttonStyle = {};
                         }
@@ -512,12 +423,7 @@ const styles = StyleSheet.create({
     },
     filterContainer: {
         padding: 15,
-        backgroundColor: 'transparent',
-        position: 'absolute',
-        top: 5,
-        borderTopWidth: 5,
-        width: '100%',
-        zIndex: 1000,
+        backgroundColor: '#1F1F1F',
     },
     searchBar: {
         flexDirection: 'row',
@@ -526,17 +432,13 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         paddingHorizontal: 10,
         marginBottom: 10,
-        borderWidth: 2,
-        borderColor: 'teal',
-        shadowColor: 'teal',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.9,
-        shadowRadius: 15,
-        elevation: 10,
+    },
+    searchInput: {
+        flex: 1,
+        color: 'white',
     },
     searchIcon: {
         marginLeft: 10,
-        color: 'transparent',
     },
     filterScroll: {
         flexDirection: 'row',
@@ -548,31 +450,21 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
         paddingHorizontal: 15,
         marginRight: 15,
-        borderWidth: 2,
-        borderColor: 'teal',
-        shadowColor: 'teal',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.9,
-        shadowRadius: 15,
-        elevation: 10,
     },
     filterText: {
         color: '#6C768A',
     },
     checkboxContainer: {
         flexDirection: 'row',
-        borderRadius: 5,
-        backgroundColor: '#19191C',
-        marginRight: 1,
-        padding: 5,
+        marginVertical:15,
+        borderRadius: 15,
     },
     checkbox: {
         flexDirection: 'row',
         alignItems: 'center',
         marginRight: 20,
         borderRadius: 15,
-        borderColor: 'teal',
-        elevation: 10,
+        borderColor: '#6C768A',
     },
     checkboxLabel: {
         color: '#6C768A',
@@ -583,18 +475,16 @@ const styles = StyleSheet.create({
     },
     resetButton: {
         position: 'absolute',
-        top: 220,
-        left: '50%',
-        transform: [{ translateX: -50 }],
+        top: 15,
+        right: 15,
         backgroundColor: 'orange',
-        borderRadius: 20,
+        borderRadius: 5,
         padding: 10,
         zIndex: 1000,
       },
       resetButtonText: {
         color: 'white',
         fontWeight: 'bold',
-        fontSize: 12,
       },
     marker: {
         flexDirection: 'row', 
@@ -682,9 +572,6 @@ const styles = StyleSheet.create({
       },
       activeButtonText: {
         color: 'white',
-      },
-      NoneButton: {
-        color: 'red',
       },
     icon: {
         color: '#6C768A',
