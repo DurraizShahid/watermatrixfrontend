@@ -4,11 +4,11 @@ import { WebView } from 'react-native-webview';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import axios from 'axios';
-import darkModeStyle from './darkModeStyle';
 import CheckBox from '@react-native-community/checkbox';
 import Geocoder from 'react-native-geocoding';
-
+import styles from './GoogleMapScreenStyles';
 Geocoder.init('AIzaSyCbuY6KKFkmb4wkMzCsOskkxd7btxHCZ-w');
+
 
 const API_BASE_URL = "https://mapmatrixbackend-production.up.railway.app/api/property/properties";
 const PLOTS_API_URL = "https://mapmatrixbackend-production.up.railway.app/api/plots/plots";
@@ -17,7 +17,7 @@ type RootStackParamList = {
     Detailedpage: { id: number };
     AdvancedSearch: undefined;
     FavouritesScreen: undefined;
-    // ... (other screens in your navigation stack)
+
 };
 
 const GoogleMapscreen: React.FC = () => {
@@ -185,7 +185,7 @@ const GoogleMapscreen: React.FC = () => {
                 <script>
                     var map = L.map('map').setView([${location.latitude}, ${location.longitude}], 13);
     
-                    L.tileLayer('https://mt1.google.com/vt/lyrs=${mapType}&x={x}&y={y}&z={z}', {
+                    L.tileLayer('https://maps.googleapis.com/maps/vt?pb=!1m5!1m4!1i{z}!2i{x}!3i{y}!4i256!2m3!1e0!2sm!3i{y}!3m9!2sen-US!3sUS!5e18!12m1!1e68!12m3!1e37!2m1!1ssmartmaps!4e0!23i1301875&key=AIzaSyA49ZSrNSSd35nTc1idC6cIk55_TEj0jlA', {
                         maxZoom: 19,
                     }).addTo(map);
     
@@ -277,8 +277,6 @@ const GoogleMapscreen: React.FC = () => {
                         }
                     });
     
-                    addMarkers(${JSON.stringify(filteredMarkers())});
-                    addPolygons(${JSON.stringify(polygons)});
                 </script>
             </body>
         </html>
@@ -334,7 +332,7 @@ const GoogleMapscreen: React.FC = () => {
             <WebView
                 ref={webViewRef}
                 originWhitelist={['*']}
-                source={{ html: renderMap() }}
+                source={{ html: renderMap(location) }}
                 javaScriptEnabled
                 injectedJavaScript={`window.ReactNativeWebView.postMessage(JSON.stringify({ markers: ${JSON.stringify(filteredMarkers())}, polygons: ${JSON.stringify(polygons)} }));`}
                 onMessage={(event) => {
@@ -417,165 +415,5 @@ const GoogleMapscreen: React.FC = () => {
     );
 };
 
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
-    filterContainer: {
-        padding: 15,
-        backgroundColor: '#1F1F1F',
-    },
-    searchBar: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#2C2C2C',
-        borderRadius: 10,
-        paddingHorizontal: 10,
-        marginBottom: 10,
-    },
-    searchInput: {
-        flex: 1,
-        color: 'white',
-    },
-    searchIcon: {
-        marginLeft: 10,
-    },
-    filterScroll: {
-        flexDirection: 'row',
-        marginBottom: 20,
-    },
-    filterButton: {
-        backgroundColor: '#19191C',
-        borderRadius: 10,
-        paddingVertical: 10,
-        paddingHorizontal: 15,
-        marginRight: 15,
-    },
-    filterText: {
-        color: '#6C768A',
-    },
-    checkboxContainer: {
-        flexDirection: 'row',
-        marginVertical:15,
-        borderRadius: 15,
-    },
-    checkbox: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginRight: 20,
-        borderRadius: 15,
-        borderColor: '#6C768A',
-    },
-    checkboxLabel: {
-        color: '#6C768A',
-        marginLeft: 5,
-    },
-    map: {
-        flex: 1,
-    },
-    resetButton: {
-        position: 'absolute',
-        top: 15,
-        right: 15,
-        backgroundColor: 'orange',
-        borderRadius: 5,
-        padding: 10,
-        zIndex: 1000,
-      },
-      resetButtonText: {
-        color: 'white',
-        fontWeight: 'bold',
-      },
-    marker: {
-        flexDirection: 'row', 
-        paddingVertical: 5,
-        paddingHorizontal:5,
-        borderRadius: 5,
-        alignItems: 'center',
-    },
-    markerText: {
-        color: 'white',
-        marginLeft: 1,
-    },
-    currentLocationButton: {
-        position: 'absolute',
-        bottom: 90,
-        right: 10,
-        backgroundColor: '#23252F',
-        borderRadius: 50,
-        padding: 20,
-    },
-    listButton: {
-        position: 'absolute',
-        bottom: 90,
-        left: 10,
-        backgroundColor: '#23252F',
-        borderRadius: 50,
-        padding: 20,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    listButtonText: {
-        left: 10,
-    },    
-    toggleMapTypeButton: {
-        position: 'absolute',
-        bottom: 160,
-        left: 10,
-        backgroundColor: '#23252F',
-        borderRadius: 40,
-        padding: 20,
-    },
-    favouritesButton: {
-        position: 'absolute',
-        bottom: 160,
-        right: 10,
-        backgroundColor: '#23252F',
-        borderRadius: 50,
-        padding: 20,
-    },
-    bottomScrollContainer: {
-        position: 'absolute',
-        bottom: 30,
-        width: '100%',
-    },
-    bottomScrollContent: {
-        paddingHorizontal: 10,
-    },
-    bottomButton: {
-        backgroundColor: '#19191C',
-        borderRadius: 10,
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 15,
-        paddingHorizontal: 15,
-        marginRight: 10,
-    },
-    buttonText: {
-        color: 'grey',
-      },
-      inProgressButton: {
-        backgroundColor: '#E97451',
-      },
-      disConnButton: {
-        backgroundColor: '#967bb6',
-      },
-      conflictButton: {
-        backgroundColor: '#F1AB86',
-      },
-      newButton: {
-        backgroundColor: '#457B9D',
-      },
-      noticeButton: {
-        backgroundColor: '#E6AF2E',
-      },
-      activeButtonText: {
-        color: 'white',
-      },
-    icon: {
-        color: '#6C768A',
-    },
-});
 
 export default GoogleMapscreen;
