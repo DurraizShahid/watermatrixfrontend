@@ -4,9 +4,21 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
     },
-    filterContainer: {
-        padding: 15,
-        backgroundColor: '#1F1F1F',
+    map: {
+        ...StyleSheet.absoluteFillObject,
+    },
+    overlayContainer: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        padding: 10,
+    },
+    hamburger: {
+        position: 'absolute',
+        top: 10,
+        left: 10,
+        zIndex: 1000,
     },
     searchBar: {
         flexDirection: 'row',
@@ -15,6 +27,7 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         paddingHorizontal: 10,
         marginBottom: 10,
+        marginTop: 50, // Adjusted to make space for the hamburger icon
     },
     searchInput: {
         flex: 1,
@@ -39,7 +52,7 @@ const styles = StyleSheet.create({
     },
     checkboxContainer: {
         flexDirection: 'row',
-        marginVertical:15,
+        marginVertical: 15,
         borderRadius: 15,
     },
     checkbox: {
@@ -53,75 +66,8 @@ const styles = StyleSheet.create({
         color: '#6C768A',
         marginLeft: 5,
     },
-    map: {
-        flex: 1,
-    },
-    resetButton: {
-        position: 'absolute',
-        top: 15,
-        right: 15,
-        backgroundColor: 'orange',
-        borderRadius: 5,
-        padding: 10,
-        zIndex: 1000,
-      },
-      resetButtonText: {
-        color: 'white',
-        fontWeight: 'bold',
-      },
-    marker: {
-        flexDirection: 'row', 
-        paddingVertical: 5,
-        paddingHorizontal:5,
-        borderRadius: 5,
-        alignItems: 'center',
-    },
-    markerText: {
-        color: 'white',
-        marginLeft: 1,
-    },
-    currentLocationButton: {
-        position: 'absolute',
-        bottom: 90,
-        right: 10,
-        backgroundColor: '#23252F',
-        borderRadius: 50,
-        padding: 20,
-    },
-    listButton: {
-        position: 'absolute',
-        bottom: 90,
-        left: 10,
-        backgroundColor: '#23252F',
-        borderRadius: 50,
-        padding: 20,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    listButtonText: {
-        left: 10,
-    },    
-    toggleMapTypeButton: {
-        position: 'absolute',
-        bottom: 160,
-        left: 10,
-        backgroundColor: '#23252F',
-        borderRadius: 40,
-        padding: 20,
-    },
-    favouritesButton: {
-        position: 'absolute',
-        bottom: 160,
-        right: 10,
-        backgroundColor: '#23252F',
-        borderRadius: 50,
-        padding: 20,
-    },
     bottomScrollContainer: {
-        position: 'absolute',
-        bottom: 30,
-        width: '100%',
+        marginBottom: 30,
     },
     bottomScrollContent: {
         paddingHorizontal: 10,
@@ -137,27 +83,79 @@ const styles = StyleSheet.create({
     },
     buttonText: {
         color: 'grey',
-      },
-      inProgressButton: {
+    },
+    inProgressButton: {
         backgroundColor: '#E97451',
-      },
-      disConnButton: {
+    },
+    disConnButton: {
         backgroundColor: '#967bb6',
-      },
-      conflictButton: {
+    },
+    conflictButton: {
         backgroundColor: '#F1AB86',
-      },
-      newButton: {
+    },
+    newButton: {
         backgroundColor: '#457B9D',
-      },
-      noticeButton: {
+    },
+    noticeButton: {
         backgroundColor: '#E6AF2E',
-      },
-      activeButtonText: {
+    },
+    activeButtonText: {
         color: 'white',
-      },
+    },
     icon: {
         color: '#6C768A',
+    },
+    statusContainer: {
+        marginBottom: 20,
+    },
+    statusOptionsContainer: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        padding: 10,
+    },
+    currentLocationButton: {
+        position: 'absolute',
+        bottom: 100,
+        right: 10,
+        backgroundColor: '#23252F',
+        borderRadius: 50,
+        padding: 15,
+        zIndex: 1000,
+    },
+    sidebar: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: 200,
+        height: '100%',
+        backgroundColor: '#2C2C2C',
+        padding: 10,
+        borderTopRightRadius: 10,
+        borderBottomRightRadius: 10,
+        zIndex: 1000,
+    },
+    sidebarOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    },
+    sidebarItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    sidebarText: {
+        color: 'white',
+        fontSize: 16,
+        marginLeft: 10,
+    },
+    sectorList: {
+        marginTop: 20,
     },
 });
 

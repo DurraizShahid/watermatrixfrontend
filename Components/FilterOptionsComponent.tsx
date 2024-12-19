@@ -6,9 +6,7 @@ import styles from '../screens/GoogleMapScreenStyles';
 export const FilterOptionsComponent = ({
     activeFilters,
     setActiveFilters,
-    activeStatuses,
-    setActiveStatuses,
-    isPaidChecked,
+    IsPaidChecked,
     setIsPaidChecked,
     isUnpaidChecked,
     setIsUnpaidChecked,
@@ -20,21 +18,9 @@ export const FilterOptionsComponent = ({
         setFiltersChanged(true);
     };
 
-    const toggleStatus = (statusName) => {
-        setActiveStatuses(prevStatuses => {
-            const newStatuses = prevStatuses.includes(statusName)
-                ? prevStatuses.filter(s => s !== statusName)
-                : [...prevStatuses, statusName];
-            setFiltersChanged(true);
-            return newStatuses;
-        });
-    };
-
-    // Define status options
-    const statusOptions = ["InProgress", "Dis-Conn", "Conflict", "New", "Notice"];
-
     return (
         <View>
+            {/* Filter Options */}
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
                 {filterOptions.map((filterName, index) => (
                     <TouchableOpacity
@@ -47,52 +33,11 @@ export const FilterOptionsComponent = ({
                 ))}
             </ScrollView>
 
-            {/* Status Options */}
-            <View style={styles.bottomScrollContainer}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.bottomScrollContent}>
-                    {statusOptions.map((statusName, index) => {
-                        const isActive = activeStatuses.includes(statusName);
-                        let buttonStyle;
-                        switch (statusName) {
-                            case "InProgress":
-                                buttonStyle = styles.inProgressButton;
-                                break;
-                            case "Dis-Conn":
-                                buttonStyle = styles.disConnButton;
-                                break;
-                            case "Conflict":
-                                buttonStyle = styles.conflictButton;
-                                break;
-                            case "New":
-                                buttonStyle = styles.newButton;
-                                break;
-                            case "Notice":
-                                buttonStyle = styles.noticeButton;
-                                break;
-                            default:
-                                buttonStyle = {};
-                        }
-
-                        return (
-                            <TouchableOpacity
-                                key={index}
-                                style={[styles.bottomButton, isActive && buttonStyle]}
-                                onPress={() => toggleStatus(statusName)}
-                            >
-                                <Text style={[styles.buttonText, isActive && styles.activeButtonText]}>
-                                    {statusName}
-                                </Text>
-                            </TouchableOpacity>
-                        );
-                    })}
-                </ScrollView>
-            </View>
-
             {/* Checkboxes for Paid and Unpaid */}
             <View style={styles.checkboxContainer}>
                 <CheckBox
-                    value={isPaidChecked}
-                    onValueChange={() => setIsPaidChecked(!isPaidChecked)}
+                    value={IsPaidChecked}
+                    onValueChange={() => setIsPaidChecked(!IsPaidChecked)}
                     tintColors={{ true: '#1EABA5', false: 'gray' }}
                 />
                 <Text style={styles.checkboxLabel}>Show Paid</Text>

@@ -1,26 +1,39 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, TextInput, ScrollView, TouchableOpacity, Text, Alert, CheckBox } from 'react-native';
-import axios from 'axios';
-import Geocoder from 'react-native-geocoding';
+import { View, TextInput, TouchableOpacity, Text, Switch, Animated, Dimensions, ScrollView, BackHandler, TouchableWithoutFeedback } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { MapViewComponent } from '../Components/MapViewComponent';
 import { useFetchProperties } from '../hooks/useFetchProperties';
 import { useFetchPolygons } from '../hooks/useFetchPolygons';
 import { FilterOptionsComponent } from '../Components/FilterOptionsComponent';
+import { StatusOptionsComponent } from '../Components/StatusOptionsComponent';
 import { handleLocationSearch } from '../utils/handleLocationSearch';
 import styles from './GoogleMapScreenStyles'; // assuming styles are imported from a separate file
+import CheckBox from 'react-native-elements/dist/checkbox/CheckBox'; // Correct import for CheckBox
+import { useNavigation } from '@react-navigation/native';
+
+type Marker = {
+    type: string;
+    status: string;
+    IsPaid: boolean;
+    price: number;
+};
 
 const GoogleMapscreen = () => {
-    const [markers, setMarkers] = useState([]);
+    const [markers, setMarkers] = useState<Marker[]>([]);
     const [polygons, setPolygons] = useState([]);
     const [location, setLocation] = useState({ latitude: 0, longitude: 0 });
     const [activeFilters, setActiveFilters] = useState(["All"]);
     const [activeStatuses, setActiveStatuses] = useState(["InProgress", "Dis-Conn", "Conflict", "New", "Notice"]);
-    const [isPaidChecked, setIsPaidChecked] = useState(false);
+    const [IsPaidChecked, setIsPaidChecked] = useState(false);
     const [isUnpaidChecked, setIsUnpaidChecked] = useState(false);
     const [filter, setFilter] = useState('');
-    const [filtersChanged, setFiltersChanged] = useState(false);
-    const webViewRef = useRef(null);
+    const [showPolygons, setShowPolygons] = useState(true);
+    const [mapType, setMapType] = useState('standard');
+    const [sidebarVisible, setSidebarVisible] = useState(false);
+    const [activeSectors, setActiveSectors] = useState<string[]>([]);
+    const sidebarAnimation = useRef(new Animated.Value(-Dimensions.get('window').width)).current;
+    const webViewRef = useRef<any>(null);
+    const navigation = useNavigation();
 
     // Use hooks to fetch properties and polygons
     useFetchProperties(setMarkers, setLocation);
@@ -28,54 +41,181 @@ const GoogleMapscreen = () => {
 
     useEffect(() => {
         if (webViewRef.current) {
-            webViewRef.current.injectJavaScript(`updateMap(${JSON.stringify(filteredMarkers())}, ${JSON.stringify(polygons)});`);
+            webViewRef.current.injectJavaScript(`updateMap(${JSON.stringify(filteredMarkers())}, ${JSON.stringify(showPolygons ? filteredPolygons() : [])});`);
         }
-    }, [markers, polygons, activeFilters, activeStatuses, isPaidChecked, isUnpaidChecked, filter]);
+    }, [markers, polygons, activeFilters, activeStatuses, IsPaidChecked, isUnpaidChecked, filter, showPolygons, activeSectors]);
+
+    useEffect(() => {
+        const backAction = () => {
+            if (sidebarVisible) {
+                toggleSidebar();
+                return true;
+            }
+            return false;
+        };
+
+        const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
+
+        return () => backHandler.remove();
+    }, [sidebarVisible]);
 
     const filteredMarkers = () => {
         return markers.filter(marker => {
             const typeFilterMatch = activeFilters.includes(marker.type) || activeFilters.includes("All");
             const statusFilterMatch = activeStatuses.includes(marker.status) || activeStatuses.includes("All");
-            const paymentFilterMatch = (isPaidChecked && marker.IsPaid) || (isUnpaidChecked && !marker.IsPaid) || (!isPaidChecked && !isUnpaidChecked);
+            const paymentFilterMatch = (IsPaidChecked && marker.IsPaid) || (isUnpaidChecked && !marker.IsPaid) || (!IsPaidChecked && !isUnpaidChecked);
             const searchFilterMatch = filter ? marker.price.toString().includes(filter) : true;
             return typeFilterMatch && statusFilterMatch && paymentFilterMatch && searchFilterMatch;
         });
     };
 
+    const filteredPolygons = () => {
+        return polygons.filter(polygon => activeSectors.includes(polygon.sector));
+    };
+
+    const toggleMapType = () => {
+        const newMapType = mapType === 'standard' ? 'satellite' : 'standard';
+        setMapType(newMapType);
+    };
+
+    const toggleSidebar = () => {
+        setSidebarVisible(!sidebarVisible);
+        Animated.timing(sidebarAnimation, {
+            toValue: sidebarVisible ? -Dimensions.get('window').width : 0,
+            duration: 300,
+            useNativeDriver: true,
+        }).start();
+    };
+
+    const toggleSector = (sector: string) => {
+        setActiveSectors(prevSectors => {
+            if (prevSectors.includes(sector)) {
+                return prevSectors.filter(s => s !== sector);
+            } else {
+                return [...prevSectors, sector];
+            }
+        });
+    };
+
+    const uniqueSectors = Array.from(new Set(polygons.map(polygon => polygon.sector)));
+
+    const goToCurrentLocation = () => {
+        navigator.geolocation.getCurrentPosition(
+            position => {
+                const { latitude, longitude } = position.coords;
+                setLocation({ latitude, longitude });
+                if (webViewRef.current) {
+                    webViewRef.current.injectJavaScript(`moveToLocation(${latitude}, ${longitude});`);
+                }
+            },
+            error => console.log(error),
+            { enableHighAccuracy: true, timeout: 20000, maximumAge: 1000 }
+        );
+    };
+
     return (
         <View style={styles.container}>
-            <View style={styles.searchBar}>
-                <TextInput
-                    style={styles.searchInput}
-                    placeholder="Enter location"
-                    placeholderTextColor="gray"
-                    onSubmitEditing={(event) => handleLocationSearch(event.nativeEvent.text, setLocation, webViewRef)}
-                    onChangeText={text => setFilter(text)}
-                />
-                <Icon name="search" size={20} color="gray" style={styles.searchIcon} />
-            </View>
-
-            {/* Filter Options */}
-            <FilterOptionsComponent
-                activeFilters={activeFilters}
-                setActiveFilters={setActiveFilters}
-                activeStatuses={activeStatuses}
-                setActiveStatuses={setActiveStatuses}
-                isPaidChecked={isPaidChecked}
-                setIsPaidChecked={setIsPaidChecked}
-                isUnpaidChecked={isUnpaidChecked}
-                setIsUnpaidChecked={setIsUnpaidChecked}
-                setFiltersChanged={setFiltersChanged}
-                filterOptions={['All', 'Residential', 'Commercial']}
-            />
-
-            {/* Map */}
             <MapViewComponent
                 location={location}
                 markers={filteredMarkers()}
-                polygons={polygons}
+                polygons={showPolygons ? filteredPolygons() : []}
                 webViewRef={webViewRef}
+                style={styles.map}
+                mapType={mapType}
             />
+
+            <View style={styles.overlayContainer}>
+                <TouchableOpacity style={styles.hamburger} onPress={toggleSidebar}>
+                    <Icon name="bars" size={30} color="black" />
+                </TouchableOpacity>
+
+                <View style={styles.searchBar}>
+                    <TextInput
+                        style={styles.searchInput}
+                        placeholder="Enter location"
+                        placeholderTextColor="gray"
+                        onSubmitEditing={(event) => handleLocationSearch(event.nativeEvent.text, setLocation, webViewRef)}
+                        onChangeText={text => setFilter(text)}
+                    />
+                    <Icon name="search" size={20} color="gray" style={styles.searchIcon} />
+                </View>
+
+                {/* Filter Options */}
+                <FilterOptionsComponent
+                    activeFilters={activeFilters}
+                    setActiveFilters={setActiveFilters}
+                    IsPaidChecked={IsPaidChecked}
+                    setIsPaidChecked={setIsPaidChecked}
+                    isUnpaidChecked={isUnpaidChecked}
+                    setIsUnpaidChecked={setIsUnpaidChecked}
+                    filterOptions={['All', 'Residential', 'Commercial']}
+                    setFiltersChanged={() => {}}
+                />
+            </View>
+
+            {/* Status Options */}
+            <View style={styles.statusOptionsContainer}>
+                <StatusOptionsComponent
+                    activeStatuses={activeStatuses}
+                    setActiveStatuses={setActiveStatuses}
+                    setFiltersChanged={() => {}}
+                />
+            </View>
+
+            {/* Current Location Button */}
+            <TouchableOpacity style={styles.currentLocationButton} onPress={goToCurrentLocation}>
+                <Icon name="location-arrow" size={30} color="white" />
+            </TouchableOpacity>
+
+            {/* Sidebar */}
+            {sidebarVisible && (
+                <TouchableWithoutFeedback onPress={toggleSidebar}>
+                    <View style={styles.sidebarOverlay}>
+                        <Animated.View style={[styles.sidebar, { transform: [{ translateX: sidebarAnimation }] }]}>
+                            <View style={styles.sidebarItem}>
+                                <Icon name="map" size={20} color="white" />
+                                <Text style={styles.sidebarText}>Show Polygons</Text>
+                                <Switch value={showPolygons} onValueChange={setShowPolygons} />
+                            </View>
+                            <TouchableOpacity
+                                style={styles.sidebarItem}
+                                onPress={() => navigation.navigate('AddProperty', { longitude: location.longitude, latitude: location.latitude })}
+                            >
+                                <Icon name="plus" size={20} color="white" />
+                                <Text style={styles.sidebarText}>Add Marker</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={styles.sidebarItem}
+                                onPress={() => navigation.navigate('FavouritesScreen')}
+                            >
+                                <Icon name="star" size={20} color="white" />
+                                <Text style={styles.sidebarText}>Favourites</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={styles.sidebarItem}
+                                onPress={toggleMapType}
+                            >
+                                <Icon name="globe" size={20} color="white" />
+                                <Text style={styles.sidebarText}>Toggle Map Type</Text>
+                            </TouchableOpacity>
+
+                            {/* Sector List */}
+                            <ScrollView style={styles.sectorList}>
+                                {uniqueSectors.map((sector, index) => (
+                                    <TouchableOpacity
+                                        key={index}
+                                        style={styles.sidebarItem}
+                                        onPress={() => toggleSector(sector)}
+                                    >
+                                        <Text style={styles.sidebarText}>{sector}</Text>
+                                        <Icon name={activeSectors.includes(sector) ? "eye" : "eye-slash"} size={20} color="white" />
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+                        </Animated.View>
+                    </View>
+                </TouchableWithoutFeedback>
+            )}
         </View>
     );
 };
