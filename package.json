@@ -14,6 +14,7 @@
     "@fortawesome/react-native-fontawesome": "^0.3.2",
     "@react-native-community/checkbox": "^0.5.17",
     "@react-native-community/geolocation": "^3.4.0",
+    "@react-native-community/slider": "^4.5.5",
     "@react-native-picker/picker": "^2.8.1",
     "@react-navigation/bottom-tabs": "^6.6.1",
     "@react-navigation/native": "^6.1.18",

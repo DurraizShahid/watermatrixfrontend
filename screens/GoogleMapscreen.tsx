@@ -7,9 +7,19 @@ import { useFetchPolygons } from '../hooks/useFetchPolygons';
 import { FilterOptionsComponent } from '../Components/FilterOptionsComponent';
 import { StatusOptionsComponent } from '../Components/StatusOptionsComponent';
 import { handleLocationSearch } from '../utils/handleLocationSearch';
+import AdvancedSearchModal from './AdvancedSearchModal'
 import styles from './GoogleMapScreenStyles'; // assuming styles are imported from a separate file
 import CheckBox from 'react-native-elements/dist/checkbox/CheckBox'; // Correct import for CheckBox
 import { useNavigation } from '@react-navigation/native';
+
+const { height } = Dimensions.get('window');
+
+// Area mapping for easier management
+const areaMapping = {
+    "10 Marla": 25,
+    "1 Kanal": 505,
+    "1 Kanal+": (area) => area > 505,
+};
 
 type Marker = {
     type: string;
@@ -31,6 +41,10 @@ const GoogleMapscreen = () => {
     const [mapType, setMapType] = useState('standard');
     const [sidebarVisible, setSidebarVisible] = useState(false);
     const [activeSectors, setActiveSectors] = useState<string[]>([]);
+    const [isAdvancedSearchVisible, setIsAdvancedSearchVisible] = useState(false);
+    const [selectedArea, setSelectedArea] = useState('');
+    const [minPrice, setMinPrice] = useState(0);
+    const [maxPrice, setMaxPrice] = useState(1000000);
     const sidebarAnimation = useRef(new Animated.Value(-Dimensions.get('window').width)).current;
     const webViewRef = useRef<any>(null);
     const navigation = useNavigation();
@@ -65,7 +79,9 @@ const GoogleMapscreen = () => {
             const statusFilterMatch = activeStatuses.includes(marker.status) || activeStatuses.includes("All");
             const paymentFilterMatch = (IsPaidChecked && marker.IsPaid) || (isUnpaidChecked && !marker.IsPaid) || (!IsPaidChecked && !isUnpaidChecked);
             const searchFilterMatch = filter ? marker.price.toString().includes(filter) : true;
-            return typeFilterMatch && statusFilterMatch && paymentFilterMatch && searchFilterMatch;
+            const areaFilterMatch = selectedArea ? areaMapping[selectedArea](marker.area) : true;
+            const priceFilterMatch = marker.price >= minPrice && marker.price <= maxPrice;
+            return typeFilterMatch && statusFilterMatch && paymentFilterMatch && searchFilterMatch && areaFilterMatch && priceFilterMatch;
         });
     };
 
@@ -113,6 +129,20 @@ const GoogleMapscreen = () => {
         );
     };
 
+    const openAdvancedSearch = () => {
+        setIsAdvancedSearchVisible(true);
+    };
+
+    const closeAdvancedSearch = () => {
+        setIsAdvancedSearchVisible(false);
+    };
+
+    const handleAdvancedSearch = (searchParams) => {
+        setSelectedArea(searchParams.selectedArea);
+        setMinPrice(searchParams.minPrice);
+        setMaxPrice(searchParams.maxPrice);
+    };
+
     return (
         <View style={styles.container}>
             <MapViewComponent
@@ -135,6 +165,7 @@ const GoogleMapscreen = () => {
                         placeholder="Enter location"
                         placeholderTextColor="gray"
                         onSubmitEditing={(event) => handleLocationSearch(event.nativeEvent.text, setLocation, webViewRef)}
+                        onFocus={openAdvancedSearch}
                         onChangeText={text => setFilter(text)}
                     />
                     <Icon name="search" size={20} color="gray" style={styles.searchIcon} />
@@ -216,6 +247,13 @@ const GoogleMapscreen = () => {
                     </View>
                 </TouchableWithoutFeedback>
             )}
+
+            {/* Advanced Search Modal */}
+            <AdvancedSearchModal
+                isVisible={isAdvancedSearchVisible}
+                onClose={closeAdvancedSearch}
+                onSearch={handleAdvancedSearch}
+            />
         </View>
     );
 };

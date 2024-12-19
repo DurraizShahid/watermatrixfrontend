@@ -157,6 +157,25 @@ const styles = StyleSheet.create({
     sectorList: {
         marginTop: 20,
     },
+    closeButton: {
+        position: 'absolute',
+        top: 40,
+        right: 20,
+        zIndex: 1000,
+    },
+    advancedSearchContainer: {
+        flex: 1,
+        padding: 20,
+        backgroundColor: '#2C2C2C',
+    },
+    advancedSearchTitle: {
+        fontSize: 24,
+        color: 'white',
+        marginBottom: 20,
+    },
+    advancedSearchContent: {
+        flex: 1,
+    },
 });
 
 export default styles;
