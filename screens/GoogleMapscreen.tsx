@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, TextInput, TouchableOpacity, Text, Switch, Animated, Dimensions, ScrollView, BackHandler, TouchableWithoutFeedback } from 'react-native';
+import { View, TextInput, TouchableOpacity, Text, Switch, Animated, Dimensions, ScrollView, BackHandler, TouchableWithoutFeedback, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { MapViewComponent } from '../Components/MapViewComponent';
 import { useFetchProperties } from '../hooks/useFetchProperties';
@@ -7,7 +7,7 @@ import { useFetchPolygons } from '../hooks/useFetchPolygons';
 import { FilterOptionsComponent } from '../Components/FilterOptionsComponent';
 import { StatusOptionsComponent } from '../Components/StatusOptionsComponent';
 import { handleLocationSearch } from '../utils/handleLocationSearch';
-import AdvancedSearchModal from './AdvancedSearchModal'
+import AdvancedSearchModal from './AdvancedSearchModal';
 import styles from './GoogleMapScreenStyles'; // assuming styles are imported from a separate file
 import CheckBox from 'react-native-elements/dist/checkbox/CheckBox'; // Correct import for CheckBox
 import { useNavigation } from '@react-navigation/native';
@@ -24,7 +24,7 @@ const areaMapping = {
 type Marker = {
     type: string;
     status: string;
-    IsPaid: boolean;
+    IsPaid: number; // Ensure IsPaid is a number
     price: number;
 };
 
@@ -38,9 +38,8 @@ const GoogleMapscreen = () => {
     const [isUnpaidChecked, setIsUnpaidChecked] = useState(false);
     const [filter, setFilter] = useState('');
     const [showPolygons, setShowPolygons] = useState(true);
-    const [mapType, setMapType] = useState('standard');
+    const [mapType, setMapType] = useState('roadmap'); // Default map type
     const [sidebarVisible, setSidebarVisible] = useState(false);
-    const [activeSectors, setActiveSectors] = useState<string[]>([]);
     const [isAdvancedSearchVisible, setIsAdvancedSearchVisible] = useState(false);
     const [selectedArea, setSelectedArea] = useState('');
     const [minPrice, setMinPrice] = useState(0);
@@ -55,9 +54,9 @@ const GoogleMapscreen = () => {
 
     useEffect(() => {
         if (webViewRef.current) {
-            webViewRef.current.injectJavaScript(`updateMap(${JSON.stringify(filteredMarkers())}, ${JSON.stringify(showPolygons ? filteredPolygons() : [])});`);
+            webViewRef.current.injectJavaScript(`updateMap(${JSON.stringify(filteredMarkers())}, ${JSON.stringify(showPolygons ? filteredPolygons() : [])}, '${mapType}');`);
         }
-    }, [markers, polygons, activeFilters, activeStatuses, IsPaidChecked, isUnpaidChecked, filter, showPolygons, activeSectors]);
+    }, [markers, polygons, activeFilters, activeStatuses, IsPaidChecked, isUnpaidChecked, filter, showPolygons, mapType]);
 
     useEffect(() => {
         const backAction = () => {
@@ -77,7 +76,7 @@ const GoogleMapscreen = () => {
         return markers.filter(marker => {
             const typeFilterMatch = activeFilters.includes(marker.type) || activeFilters.includes("All");
             const statusFilterMatch = activeStatuses.includes(marker.status) || activeStatuses.includes("All");
-            const paymentFilterMatch = (IsPaidChecked && marker.IsPaid) || (isUnpaidChecked && !marker.IsPaid) || (!IsPaidChecked && !isUnpaidChecked);
+            const paymentFilterMatch = (IsPaidChecked && marker.IsPaid === 1) || (isUnpaidChecked && marker.IsPaid === 0) || (!IsPaidChecked && !isUnpaidChecked);
             const searchFilterMatch = filter ? marker.price.toString().includes(filter) : true;
             const areaFilterMatch = selectedArea ? areaMapping[selectedArea](marker.area) : true;
             const priceFilterMatch = marker.price >= minPrice && marker.price <= maxPrice;
@@ -86,11 +85,11 @@ const GoogleMapscreen = () => {
     };
 
     const filteredPolygons = () => {
-        return polygons.filter(polygon => activeSectors.includes(polygon.sector));
+        return polygons;
     };
 
     const toggleMapType = () => {
-        const newMapType = mapType === 'standard' ? 'satellite' : 'standard';
+        const newMapType = mapType === 'roadmap' ? 'satellite' : mapType === 'satellite' ? 'terrain' : 'roadmap';
         setMapType(newMapType);
     };
 
@@ -101,32 +100,6 @@ const GoogleMapscreen = () => {
             duration: 300,
             useNativeDriver: true,
         }).start();
-    };
-
-    const toggleSector = (sector: string) => {
-        setActiveSectors(prevSectors => {
-            if (prevSectors.includes(sector)) {
-                return prevSectors.filter(s => s !== sector);
-            } else {
-                return [...prevSectors, sector];
-            }
-        });
-    };
-
-    const uniqueSectors = Array.from(new Set(polygons.map(polygon => polygon.sector)));
-
-    const goToCurrentLocation = () => {
-        navigator.geolocation.getCurrentPosition(
-            position => {
-                const { latitude, longitude } = position.coords;
-                setLocation({ latitude, longitude });
-                if (webViewRef.current) {
-                    webViewRef.current.injectJavaScript(`moveToLocation(${latitude}, ${longitude});`);
-                }
-            },
-            error => console.log(error),
-            { enableHighAccuracy: true, timeout: 20000, maximumAge: 1000 }
-        );
     };
 
     const openAdvancedSearch = () => {
@@ -142,6 +115,9 @@ const GoogleMapscreen = () => {
         setMinPrice(searchParams.minPrice);
         setMaxPrice(searchParams.maxPrice);
     };
+
+    // Define uniqueSectors based on the polygons data
+    const uniqueSectors = [...new Set(polygons.map(polygon => polygon.sector))];
 
     return (
         <View style={styles.container}>
@@ -193,11 +169,6 @@ const GoogleMapscreen = () => {
                 />
             </View>
 
-            {/* Current Location Button */}
-            <TouchableOpacity style={styles.currentLocationButton} onPress={goToCurrentLocation}>
-                <Icon name="location-arrow" size={30} color="white" />
-            </TouchableOpacity>
-
             {/* Sidebar */}
             {sidebarVisible && (
                 <TouchableWithoutFeedback onPress={toggleSidebar}>
@@ -239,7 +210,6 @@ const GoogleMapscreen = () => {
                                         onPress={() => toggleSector(sector)}
                                     >
                                         <Text style={styles.sidebarText}>{sector}</Text>
-                                        <Icon name={activeSectors.includes(sector) ? "eye" : "eye-slash"} size={20} color="white" />
                                     </TouchableOpacity>
                                 ))}
                             </ScrollView>

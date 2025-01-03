@@ -1,8 +1,19 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { WebView } from 'react-native-webview';
+import { useNavigation } from '@react-navigation/native';
 
-export const MapViewComponent = ({ location, markers, polygons, webViewRef }) => {
+export const MapViewComponent = ({ location, markers, polygons, webViewRef, mapType }) => {
+    const navigation = useNavigation();
+
     const renderMap = () => {
+        const tileLayerUrl = mapType === 'satellite'
+            ? 'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}&key=AIzaSyCbuY6KKFkmb4wkMzCsOskkxd7btxHCZ-w'
+            : mapType === 'terrain'
+            ? 'https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}&key=AIzaSyCbuY6KKFkmb4wkMzCsOskkxd7btxHCZ-w'
+            : mapType === 'hybrid'
+            ? 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}&key=AIzaSyCbuY6KKFkmb4wkMzCsOskkxd7btxHCZ-w'
+            : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+
         return `
         <!DOCTYPE html>
         <html>
@@ -45,7 +56,7 @@ export const MapViewComponent = ({ location, markers, polygons, webViewRef }) =>
                 <script>
                     var map = L.map('map').setView([${location.latitude}, ${location.longitude}], 13);
     
-                    L.tileLayer('https://maps.googleapis.com/maps/vt?pb=!1m5!1m4!1i{z}!2i{x}!3i{y}!4i256!2m3!1e0!2sm!3i{y}!3m9!2sen-US!3sUS!5e18!12m1!1e68!12m3!1e37!2m1!1ssmartmaps!4e0!23i1301875&key=AIzaSyA49ZSrNSSd35nTc1idC6cIk55_TEj0jlA', {
+                    L.tileLayer('${tileLayerUrl}', {
                         maxZoom: 19,
                     }).addTo(map);
 
@@ -103,6 +114,9 @@ export const MapViewComponent = ({ location, markers, polygons, webViewRef }) =>
                             });
                     
                             var markerInstance = L.marker([marker.latitude, marker.longitude], { icon: icon });
+                            markerInstance.on('click', function() {
+                                window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'markerClick', id: marker.id }));
+                            });
                             markersLayer.addLayer(markerInstance);
                         });
 
@@ -145,6 +159,19 @@ export const MapViewComponent = ({ location, markers, polygons, webViewRef }) =>
     `;
     };
 
+    useEffect(() => {
+        if (webViewRef.current) {
+            webViewRef.current.injectJavaScript(`updateMap(${JSON.stringify(markers)}, ${JSON.stringify(polygons)});`);
+        }
+    }, [mapType]);
+
+    const handleMessage = (event) => {
+        const data = JSON.parse(event.nativeEvent.data);
+        if (data.type === 'markerClick') {
+            navigation.navigate('Detailedpage', { id: data.id });
+        }
+    };
+
     return (
         <WebView
             ref={webViewRef}
@@ -152,6 +179,7 @@ export const MapViewComponent = ({ location, markers, polygons, webViewRef }) =>
             source={{ html: renderMap() }}
             style={{ flex: 1 }}
             javaScriptEnabled
+            onMessage={handleMessage}
         />
     );
 };

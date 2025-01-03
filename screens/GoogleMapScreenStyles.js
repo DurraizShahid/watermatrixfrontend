@@ -52,19 +52,20 @@ const styles = StyleSheet.create({
     },
     checkboxContainer: {
         flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(44, 44, 44, 0.8)', // Semi-transparent background
+        borderRadius: 10, // Added border radius
+        paddingVertical: 5, // Reduced height
+        paddingHorizontal: 10, // Added padding
         marginVertical: 15,
-        borderRadius: 15,
     },
     checkbox: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginRight: 20,
-        borderRadius: 15,
-        borderColor: '#6C768A',
+        marginRight: 10,
     },
     checkboxLabel: {
-        color: '#6C768A',
+        color: 'white',
         marginLeft: 5,
+        alignSelf: 'center', // Align text in the middle of the checkbox
     },
     bottomScrollContainer: {
         marginBottom: 30,
@@ -115,22 +116,13 @@ const styles = StyleSheet.create({
         right: 0,
         padding: 10,
     },
-    currentLocationButton: {
-        position: 'absolute',
-        bottom: 100,
-        right: 10,
-        backgroundColor: '#23252F',
-        borderRadius: 50,
-        padding: 15,
-        zIndex: 1000,
-    },
     sidebar: {
         position: 'absolute',
         top: 0,
         left: 0,
         width: 200,
         height: '100%',
-        backgroundColor: '#2C2C2C',
+        backgroundColor: '#19191C',
         padding: 10,
         borderTopRightRadius: 10,
         borderBottomRightRadius: 10,
@@ -147,7 +139,8 @@ const styles = StyleSheet.create({
     sidebarItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 20,
+        marginBottom: 30,
+        marginTop: 30, // Added margin to move items below
     },
     sidebarText: {
         color: 'white',
@@ -162,19 +155,6 @@ const styles = StyleSheet.create({
         top: 40,
         right: 20,
         zIndex: 1000,
-    },
-    advancedSearchContainer: {
-        flex: 1,
-        padding: 20,
-        backgroundColor: '#2C2C2C',
-    },
-    advancedSearchTitle: {
-        fontSize: 24,
-        color: 'white',
-        marginBottom: 20,
-    },
-    advancedSearchContent: {
-        flex: 1,
     },
 });
 

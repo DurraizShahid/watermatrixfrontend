@@ -4,7 +4,7 @@ const styles = StyleSheet.create({
     advancedSearchContainer: {
         flex: 1,
         padding: 20,
-        backgroundColor: '#2C2C2C',
+        backgroundColor: '#23252F',
     },
     header: {
         flexDirection: 'row',
@@ -37,7 +37,8 @@ const styles = StyleSheet.create({
         paddingHorizontal: 15,
         marginHorizontal: 10, // Increased spacing between buttons
         backgroundColor: '#23252F',
-        borderRadius: 8, // Smoother corners
+        borderRadius: 8, 
+        borderColor: '#23252F',
     },
     menuButtonActive: {
         backgroundColor: '#1EABA5',
@@ -46,8 +47,10 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         paddingHorizontal: 15,
         marginHorizontal: 10,
-        backgroundColor: '#6C768A',
         borderRadius: 8,
+        borderColor: '#6C768A',
+        borderWidth: 1,       // Adjust thickness as needed
+        borderColor: '#1EABA5',
     },
     filterButtonActive: {
         backgroundColor: '#1EABA5',
@@ -70,7 +73,10 @@ const styles = StyleSheet.create({
         paddingVertical: 12, // More padding for a larger input field
         paddingHorizontal: 15,
         borderRadius: 8,
+        borderWidth: 1,       // Adjust thickness as needed
+        borderColor: '#1EABA5',
     },
+    
     searchButton: {
         backgroundColor: '#1EABA5',
         paddingVertical: 15, // Slightly smaller padding for consistency
@@ -102,7 +108,6 @@ const styles = StyleSheet.create({
         marginLeft: 10,
     },
     picker: {
-        backgroundColor: '#6C768A',
         color: 'white',
         height: 50,
         borderRadius: 8, // Smoother corners
